@@ -10,6 +10,8 @@ Image for charging bun, fnm, node, npm and zsh.
 
 > This dockerfile use Ubuntu 24.04
 
+> This dockerfile use [```cartagodocker/zsh```](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
+
 > This dockerfile use zsh, and has git and ssh installed.
 
 ## Create Image
