@@ -15,15 +15,19 @@ ARG FNM_VERSION=1.38.1
 
 ARG TEMPLATE_HOME=/etc/skel
 ARG FNM_HOME=/usr/local/fnm
+ARG BUN_HOME=/usr/local/bun
+
+ARG BUN_BIN=${BUN_HOME}/bin
 
 ARG BUN_URL=https://bun.sh/install
 # ARG FNM_URL=https://fnm.vercel.app/install
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PATH=${FNM_HOME}:${PATH} \
+    PATH=${BUN_BIN}:${FNM_HOME}:${PATH} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
-    FNM_HOME=${FNM_HOME} 
+    FNM_HOME=${FNM_HOME} \
+    BUN_HOME=${BUN_HOME}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl unzip git ssh ca-certificates \
@@ -40,8 +44,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod -R 755 ${FNM_HOME} \
     # Install bun
     && curl -fsSL ${BUN_URL} | bash -s bun-v${BUN_VERSION} \
-    && mv /root/.bun/bin/bun /usr/local/bin/ \
-    && chmod a+x /usr/local/bin/bun \
+    && mkdir -p ${BUN_HOME} \
+    # && mv /root/.bun/bin/bun /usr/local/bin/ \
+    # && cp -r /root/.bun/* ${BUN_HOME} \
+    && mv /root/.bun/* ${BUN_HOME} \
+    && rm -rf /root/.bun \
+    # && ln -s ${BUN_HOME} /root/.bun \
+    && chmod -R 777 ${BUN_HOME} \
     # Apply configuration to existing users' home directories
     # Ensure the root user also gets the configuration
     && for dir in /home/* /root; do \
@@ -63,5 +72,5 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'eval $(fnm env)' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
-    'PATH=$HOME/.bun/bin:$PATH' \
+    'ln -s ${BUN_HOME} ${HOME}/.bun' \
     )"
