@@ -21,6 +21,12 @@ Image for charging bun, fnm, node, npm and zsh.
 
 You can use this envs to set the default node version and the fnm home in inherited images.
 
+For example:
+
+```Dockerfile
+RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}
+```
+
 ## Create Image
 
 ````bash
