@@ -13,7 +13,8 @@ ARG NODE_DEFAULT_VERSION=22
 ARG BUN_VERSION=1.1.42
 ARG FNM_VERSION=1.38.1
 
-ARG BUN_HOME=${USER_HOME}/.bun/bin
+ARG TEMPLATE_HOME=/etc/skel
+ARG BUN_HOME=${TEMPLATE_HOME}/.bun/bin
 ARG FNM_HOME=/usr/local/fnm
 
 ARG BUN_URL=https://bun.sh/install
@@ -21,7 +22,7 @@ ARG BUN_URL=https://bun.sh/install
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PATH=${BUN_HOME}:${FNM_HOME}:${PATH} \
+    PATH=${FNM_HOME}:${PATH} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
     FNM_HOME=${FNM_HOME} 
 
@@ -35,14 +36,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fnm install ${NODE_DEFAULT_VERSION} \
     && fnm default ${NODE_DEFAULT_VERSION} \
     && eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} \
-    && mkdir -p ${USER_HOME}/.local/share \
-    && cp -r /root/.local/share/fnm ${USER_HOME}/.local/share/fnm \
+    && mkdir -p ${TEMPLATE_HOME}/.local/share \
+    && cp -r /root/.local/share/fnm ${TEMPLATE_HOME}/.local/share/fnm \
     && chmod -R 755 ${FNM_HOME} \
-    && chown -R ${USER_UID}:${USER_GID} ${FNM_HOME} \
     # Install bun
     && curl -fsSL ${BUN_URL} | bash -s bun-v${BUN_VERSION} \
     && mv /root/.bun/bin/bun /usr/local/bin/ \
     && chmod a+x /usr/local/bin/bun \
+    # Apply configuration to existing users' home directories
+    # Ensure the root user also gets the configuration
+    && for dir in /home/* /root; do \
+            if [ -d "$dir" ]; then \
+                mkdir -p "$dir/.local/share"; \
+                cp -rf ${TEMPLATE_HOME}/.local/share/fnm $dir/.local/share/fnm; \
+                chown -R $(basename $dir):$(basename $dir) $dir; \
+            fi; \
+        done \
     # Clean run
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /root/.cache
