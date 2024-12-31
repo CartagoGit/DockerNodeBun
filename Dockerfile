@@ -23,8 +23,7 @@ ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${BUN_HOME}:${FNM_HOME}:${PATH} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
-    FNM_HOME=${FNM_HOME} \
-    FNM_VERSION=${FNM_VERSION}
+    FNM_HOME=${FNM_HOME} 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl unzip git ssh ca-certificates \

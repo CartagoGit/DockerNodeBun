@@ -14,6 +14,13 @@ Image for charging bun, fnm, node, npm and zsh.
 
 > This dockerfile use zsh, and has git and ssh installed.
 
+## ENVS
+
+- NODE_DEFAULT_VERSION=22
+- FNM_HOME=/usr/local/fnm
+
+You can use this envs to set the default node version and the fnm home in inherited images.
+
 ## Create Image
 
 ````bash
