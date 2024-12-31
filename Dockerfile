@@ -14,7 +14,6 @@ ARG BUN_VERSION=1.1.42
 ARG FNM_VERSION=1.38.1
 
 ARG TEMPLATE_HOME=/etc/skel
-ARG BUN_HOME=${TEMPLATE_HOME}/.bun/bin
 ARG FNM_HOME=/usr/local/fnm
 
 ARG BUN_URL=https://bun.sh/install
@@ -64,4 +63,5 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'eval $(fnm env)' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
+    'PATH=$HOME/.bun/bin:$PATH' \
     )"
