@@ -38,11 +38,19 @@ jobs:
           DOCKERHUB_REPO: $${{ vars.DOCKERHUB_REPO }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
         run: |
-          response=$(curl -w "%{http_code}" -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
-          -H "Authorization: JWT ${DOCKERHUB_PASSWORD}" \
-          -H "Content-Type: application/json" \
-          -d "{\"full_description\": $(jq -Rs . < README.md)}")
-          if [ "$response" -ne 200 ]; then
-            echo "Error: Request failed with HTTP status $response" >&2
+          # Realizamos el curl normalmente y obtenemos el código de estado HTTP
+          response=$(curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
+            -H "Authorization: JWT ${DOCKERHUB_PASSWORD}" \
+            -H "Content-Type: application/json" \
+            -d "{\"full_description\": $(jq -Rs . < README.md)}" \
+            -w "%{http_code}")
+
+          # Mostrar la respuesta completa
+          echo "Response: $response"
+
+          # Comprobamos si el código de estado HTTP es 200
+          status_code=$(echo "$response" | tail -n 1)  # Extraemos solo el código de estado HTTP
+          if [ "$status_code" -ne 200 ]; then
+            echo "Error: Request failed with HTTP status $status_code" >&2
             exit 1
           fi
