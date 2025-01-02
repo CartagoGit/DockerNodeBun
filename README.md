@@ -137,6 +137,10 @@ For that if you want use a new RUN, eval $(fnm env) must be called to assign nod
 
 I added automaticaly charge node for the user in the entrypoint of the .zshrc file. But it necessary understand that we call a new RUN in Dockerfile the $PATH will be reset, and we must call `eval $(fnm env)` to assign the path to node and npm again.
 
+> Important install dependencies globally with bun, and give permissions to the user you want to use it.
+
+If you install a dependency with fnm like -> `npm install -g @ionic/cli`, it will be installed just for this shell session. If you want to use it in other shell session, you must install again. Then, I recommend to use bun to install global dependencies to share between shell and user sessions.
+
 ---
 
 # For specific inner scripts:
