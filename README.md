@@ -12,12 +12,12 @@ Image for charging bun, fnm, node, npm and zsh.
 
 > This dockerfile use [```cartagodocker/zsh```](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
 
-> This dockerfile use zsh, and has git and ssh installed.
 
 ## Environments
 
 - NODE_DEFAULT_VERSION=22
-- FNM_HOME=/usr/local/fnm
+- FNM_HOME=/usr/share/fnm
+- BUN_HOME=/usr/share/bun
 
 You can use this envs to set the default node version and the fnm home in inherited images.
 
@@ -57,7 +57,7 @@ Just add the next line in the Dockerfile to base the other image on this one.
 FROM cartagodocker/nodebun:latest
 ````
 
-## To add commands or text in the .zshrc file
+## For specific inner scripts:
 
 Look the cartagodocker/zsh image documentation in the next link:
 
