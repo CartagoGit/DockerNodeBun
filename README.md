@@ -14,8 +14,15 @@ Image for charging bun, fnm, node, npm and zsh.
 
 > This dockerfile use Ubuntu 24.04
 
-> This dockerfile use [```cartagodocker/zsh```](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
+> This dockerfile use [`cartagodocker/zsh`](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
 
+## Specifications:
+
+- Zsh
+- Bun.js 1.1.42
+- Fast Node Manader 1.38.1
+- Node 22 lts
+- Npm 10.9.0
 
 ## Environments
 
@@ -29,6 +36,13 @@ For example:
 
 ```Dockerfile
 RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}
+```
+
+Or if you want change the default node version in the inherited image:
+
+```Dockerfile
+FROM cartagodocker/nodebun:latest
+ENV NODE_DEFAULT_VERSION=14
 ```
 
 ## Create Image
@@ -60,10 +74,11 @@ Just add the next line in the Dockerfile to base the other image on this one.
 ````Dockerfile 
 FROM cartagodocker/nodebun:latest
 ````
+---
 
-## For specific inner scripts:
+# For specific inner scripts:
 
 Look the cartagodocker/zsh image documentation in the next link:
 
-https://hub.docker.com/repository/docker/cartagodocker/zsh/general
+[`cartagodocker/zsh`](https://hub.docker.com/repository/docker/cartagodocker/zsh/general)
 
