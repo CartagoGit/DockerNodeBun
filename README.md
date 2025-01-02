@@ -78,6 +78,65 @@ Just add the next line in the Dockerfile to base the other image on this one.
 ````Dockerfile 
 FROM cartagodocker/nodebun:latest
 ````
+
+---
+
+# For install global dependencies with bun and access with other users:
+
+It is necessary to give permissions for new installed dependencies.
+
+At normal when you install globally with bun it will install with the user permissions. If you change the user in the container, you will not have access to the installed dependencies.
+
+The symlink folder is in /usr/share/bun
+
+If you install a global dependency with bun, you can give permissions to the user you want to use it.
+
+For example:
+
+```bash
+bun install -g @angular/cli
+chown -R 1000:1000 /usr/share/bun
+```
+
+Other example:
+
+```bash
+bun install -g @angular/cli
+chmod -R 777 /usr/share/bun
+```
+
+You can do it in inherited images with the next line in the Dockerfile:
+
+```Dockerfile
+FROM cartagodocker/nodebun:latest
+RUN bun install -g @angular/cli && chmod -R 777 /usr/share/bun
+```
+
+Or using env `BUN_HOME`:
+
+```Dockerfile
+FROM cartagodocker/nodebun:latest
+RUN bun install -g @angular/cli && chown -R 1000:1000 ${BUN_HOME}
+```
+
+---
+
+# For use node in inherited images:
+
+You can use the next line in the Dockerfile to use the default node version:
+
+```Dockerfile
+FROM cartagodocker/nodebun:latest
+RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}  \
+    && npm --version && node --version
+```
+
+> Important: It is necessary to use `eval $(fnm env)` to assign path to node and npm for the user. And it is necessary to use `fnm use` to set the node version.
+
+For that if you want use a new RUN, eval $(fnm env) must be called to assign node and npm to the $PATH fo the user.
+
+I added automaticaly charge node for the user in the entrypoint of the .zshrc file. But it necessary understand that we call a new RUN in Dockerfile the $PATH will be reset, and we must call `eval $(fnm env)` to assign the path to node and npm again.
+
 ---
 
 # For specific inner scripts:
