@@ -93,9 +93,11 @@ RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}  \
 
 > Important: It is necessary to use `eval $(fnm env)` to assign path to node and npm for the user. And it is necessary to use `fnm use` to set the node version.
 
+Fast node manager works with multishell, it means that you can use different node versions in different shell sessions.
+
 For that if you want use a new RUN, eval $(fnm env) must be called to assign node and npm to the $PATH fo the user.
 
-I added automaticaly charge node for the user in the entrypoint of the .zshrc file. But it necessary understand that we call a new RUN in Dockerfile the $PATH will be reset, and we must call `eval $(fnm env)` to assign the path to node and npm again.
+I added an automatic load node for the user in the entrypoint of the .zshrc file. But it necessary understand that if we call a new RUN in Dockerfile the $PATH will be reset, and we must call `eval $(fnm env)` to assign the path to node and npm again.
 
 > Important install dependencies globally with bun, and give permissions to the user you want to use it.
 
