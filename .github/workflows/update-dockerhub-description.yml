@@ -1,0 +1,44 @@
+name: Update Docker Hub Description
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md 
+
+jobs:
+  update-description:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get previous README content
+        id: previous_readme
+        run: |
+          git fetch origin main --depth=2
+          git show HEAD~1:README.md > previous_README.md || echo "" > previous_README.md
+
+      - name: Compare README
+        id: compare
+        run: |
+          if cmp -s README.md previous_README.md; then
+            echo "README.md has not changed."
+            echo "update_needed=false" >> $GITHUB_ENV
+          else
+            echo "README.md has changed."
+            echo "update_needed=true" >> $GITHUB_ENV
+          fi
+
+      - name: Update Docker Hub Description
+        if: env.update_needed == 'true'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          curl -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
+          -H "Authorization: JWT ${DOCKERHUB_PASSWORD}" \
+          -H "Content-Type: application/json" \
+          -d "{\"full_description\": $(jq -Rs . < README.md)}"

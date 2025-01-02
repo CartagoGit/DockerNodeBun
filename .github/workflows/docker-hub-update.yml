@@ -9,8 +9,8 @@ jobs:
     build:
         runs-on: ubuntu-latest
         env: # Definir variables de entorno a nivel de trabajo
-            IMAGE_TAG: '${{ secrets.DOCKERHUB_USERNAME }}/nodebun:${GITHUB_REF#refs/tags/}'
-            IMAGE_LATEST: '${{ secrets.DOCKERHUB_USERNAME }}/nodebun:latest'
+            IMAGE_TAG: '${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:${GITHUB_REF#refs/tags/}'
+            IMAGE_LATEST: '${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:latest'
 
         steps:
             - name: Checkout repository
@@ -29,12 +29,12 @@ jobs:
               id: tag
               run: |
                   echo "VERSION_TAG=${GITHUB_REF#refs/tags/}"
-                  echo "IMAGE_TAG=${{ secrets.DOCKERHUB_USERNAME }}/nodebun:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-                  echo "IMAGE_LATEST=${{ secrets.DOCKERHUB_USERNAME }}/nodebun:latest" >> GITHUB_ENV
+                  echo "IMAGE_TAG=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+                  echo "IMAGE_LATEST=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:latest" >> GITHUB_ENV
 
             - name: Check if the tag exists on Docker Hub
               run: |
-                  TAG_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/nodebun/tags/${{ env.VERSION_TAG }}/")
+                  TAG_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}/tags/${{ env.VERSION_TAG }}/")
                   if [ "$TAG_EXISTS" -eq 200 ]; then
                       echo "Tag already exists, skipping push"
                       exit 1
