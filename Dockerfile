@@ -7,6 +7,7 @@ ARG BUN_VERSION=1.1.42
 ARG FNM_VERSION=1.38.1
 
 ARG SHARE_HOME=/usr/share
+ARG BIN_HOME=/usr/local/bin
 
 ARG BUN_HOME=${SHARE_HOME}/bun
 ARG FNM_HOME=${SHARE_HOME}/fnm
@@ -16,6 +17,8 @@ ARG BUN_BIN=${BUN_HOME}/bin
 
 ARG BUN_URL=https://bun.sh/install
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
+
+COPY ./scripts ${BIN_HOME}
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${BUN_BIN}:${FNM_BIN}:${PATH} \
@@ -39,6 +42,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -fsSL ${BUN_URL} | bash -s bun-v${BUN_VERSION} \
     # Move bun to the desired location and create a symbolic link to the cache folder
     && share_config_globally .bun --to bun \
+    # Create a wrapper for bun to obley to give permissions to the share folders in global installations
+    && mv ${BUN_BIN}/bun ${BUN_BIN}/bun_original \
+    && chmod +x ${BIN_HOME}/bun_wrapper.zsh \
+    && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     # Clean run
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/*

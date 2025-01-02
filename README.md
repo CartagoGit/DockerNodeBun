@@ -81,46 +81,6 @@ FROM cartagodocker/nodebun:latest
 
 ---
 
-# For install global dependencies with bun and access with other users:
-
-It is necessary to give permissions for new installed dependencies.
-
-At normal when you install globally with bun it will install with the user permissions. If you change the user in the container, you will not have access to the installed dependencies.
-
-The symlink folder is in /usr/share/bun
-
-If you install a global dependency with bun, you can give permissions to the user you want to use it.
-
-For example:
-
-```bash
-bun install -g @angular/cli
-chown -R 1000:1000 /usr/share/bun
-```
-
-Other example:
-
-```bash
-bun install -g @angular/cli
-chmod -R 777 /usr/share/bun
-```
-
-You can do it in inherited images with the next line in the Dockerfile:
-
-```Dockerfile
-FROM cartagodocker/nodebun:latest
-RUN bun install -g @angular/cli && chmod -R 777 /usr/share/bun
-```
-
-Or using env `BUN_HOME`:
-
-```Dockerfile
-FROM cartagodocker/nodebun:latest
-RUN bun install -g @angular/cli && chown -R 1000:1000 ${BUN_HOME}
-```
-
----
-
 # For use node in inherited images:
 
 You can use the next line in the Dockerfile to use the default node version:
