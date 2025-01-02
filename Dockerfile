@@ -53,3 +53,4 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
     )"
+    
