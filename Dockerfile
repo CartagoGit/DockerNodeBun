@@ -48,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     # Clean run
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/*
+    && rm -rf /var/lib/apt/lists/* /tmp/* || true
 
 # Add to .zshrc the configuration for fnm and bun
 RUN add_text_to_zshrc "$(printf '%s\n' \
