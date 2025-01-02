@@ -1,5 +1,4 @@
 FROM cartagodocker/zsh:latest
-
 USER root
 
 # Versions
@@ -44,7 +43,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
-
 # Add to .zshrc the configuration for fnm and bun
 RUN add_text_to_zshrc "$(printf '%s\n' \
     '# Asign autocomplete for fnm' \
@@ -53,6 +51,3 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
     )"
-
-
-    
