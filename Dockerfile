@@ -62,6 +62,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Create final wrapper for bun to manage permissions and call the smart selector
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
+    # Set permissions to 777 for compatibility with CI runners (like v.1.0.7)
+    && chmod -R 777 ${BUN_HOME} \
     # Move bun to the desired location and create a symbolic link to the cache folder
     && share_config_globally .bun --to bun \
     # Clean run
