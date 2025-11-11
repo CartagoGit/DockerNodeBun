@@ -19,7 +19,7 @@ Image for charging bun, fnm, node, npm and zsh.
 ## Specifications:
 
 - Zsh
-- Bun.js 1.1.42
+- Bun.js 1.3.2 (with automatic AVX2/baseline detection)
 - Fast Node Manader 1.38.1
 - Node 22 lts
 - Npm 10.9.0

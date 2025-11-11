@@ -3,7 +3,7 @@ USER root
 
 # Versions
 ARG NODE_DEFAULT_VERSION=22
-ARG BUN_VERSION=1.1.42
+ARG BUN_VERSION=1.3.2
 ARG FNM_VERSION=1.38.1
 
 ARG SHARE_HOME=/usr/share
@@ -15,7 +15,9 @@ ARG FNM_HOME=${SHARE_HOME}/fnm
 ARG FNM_BIN=${FNM_HOME}/bin
 ARG BUN_BIN=${BUN_HOME}/bin
 
-ARG BUN_URL=https://bun.sh/install
+ARG TARGETARCH
+ARG BUN_DOWNLOAD_URL_AVX2=https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-${TARGETARCH:-x64}.zip
+ARG BUN_DOWNLOAD_URL_BASELINE=https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-${TARGETARCH:-x64}-baseline.zip
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
 
 COPY ./scripts ${BIN_HOME}
@@ -38,12 +40,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fnm default ${NODE_DEFAULT_VERSION} \
     # Move fnm to the desired location and create a symbolic link to the cache folder
     && share_config_globally .local/share/fnm --to fnm \
-    # Install bun
-    && curl -fsSL ${BUN_URL} | bash -s bun-v${BUN_VERSION} \
+    # Install both bun versions (AVX2 optimized and baseline)
+    && mkdir -p ${BUN_HOME} \
+    # Download AVX2 version
+    && curl -fsSL ${BUN_DOWNLOAD_URL_AVX2} -o /tmp/bun-avx2.zip \
+    && unzip /tmp/bun-avx2.zip -d /tmp/bun-avx2 \
+    && mv /tmp/bun-avx2/bun-linux-* ${BUN_BIN}/bun_avx2 \
+    && chmod +x ${BUN_BIN}/bun_avx2 \
+    # Download baseline version
+    && curl -fsSL ${BUN_DOWNLOAD_URL_BASELINE} -o /tmp/bun-baseline.zip \
+    && unzip /tmp/bun-baseline.zip -d /tmp/bun-baseline \
+    && mv /tmp/bun-baseline/bun-linux-*-baseline ${BUN_BIN}/bun_baseline \
+    && chmod +x ${BUN_BIN}/bun_baseline \
+    # Create smart wrapper that detects CPU capabilities
+    && echo '#!/bin/sh' > ${BIN_HOME}/bun_selector.sh \
+    && echo 'if grep -q "avx2" /proc/cpuinfo 2>/dev/null; then' >> ${BIN_HOME}/bun_selector.sh \
+    && echo '  exec '"${BUN_BIN}"'/bun_avx2 "$@"' >> ${BIN_HOME}/bun_selector.sh \
+    && echo 'else' >> ${BIN_HOME}/bun_selector.sh \
+    && echo '  exec '"${BUN_BIN}"'/bun_baseline "$@"' >> ${BIN_HOME}/bun_selector.sh \
+    && echo 'fi' >> ${BIN_HOME}/bun_selector.sh \
+    && chmod +x ${BIN_HOME}/bun_selector.sh \
+    && ln -s ${BIN_HOME}/bun_selector.sh ${BUN_BIN}/bun_original \
     # Move bun to the desired location and create a symbolic link to the cache folder
     && share_config_globally .bun --to bun \
-    # Create a wrapper for bun to obley to give permissions to the share folders in global installations
-    && mv ${BUN_BIN}/bun ${BUN_BIN}/bun_original \
+    # Create final wrapper for bun to manage permissions and call the smart selector
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     # Clean run
