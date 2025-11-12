@@ -25,7 +25,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${BUN_BIN}:${FNM_BIN}:${PATH} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
     FNM_BIN=${FNM_BIN} \
-    BUN_HOME=${BUN_HOME}
+    BUN_HOME=${BUN_HOME} \
+    BUN_INSTALL=${BUN_HOME}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip ca-certificates \
