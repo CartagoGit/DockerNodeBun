@@ -37,8 +37,8 @@ Donde:
 | Tag | Significado |
 |---|---|
 | `v1_n22.12.0_b1.1.42` | Estado actual de la imagen legacy (no se publica con este canon) |
-| `v1_n26.3.1_b1.3.14` | Primera publicación con Node 26 + bun 1.3.14 |
-| `v2_n26.3.1_b1.3.14` | **Próximo tag** para la misma matriz (README/workflow alignment) |
+| `v1_n26.3.1_b1.3.14` | Publicación con Node 26 + bun 1.3.14 |
+| `v2_n26.3.1_b1.3.14` | Futuro republish de la misma matriz, si alguna vez hiciera falta |
 | `v1_n28.0.0_b1.5.0` | Cuando salga Node 28 LTS — contador reinicia a `v1` |
 | `v1_n26.3.1_b1.4.0` | Bump de bun a 1.4.0 — contador reinicia a `v1` |
 
@@ -87,7 +87,7 @@ Los tags `v.1.0.0` … `v.1.1.2` existentes **NO se reescriben**:
 - **Rebuild de la misma matriz** (fix en `scripts/`, bump de imagen base,
    limpieza de caché, etc.) → `v2_...`, `v3_...`, etc. **Sin tocar runtime**.
 - **Cambio de major de node o bun** → `v1_...` con la nueva matriz.
-- El consumidor puede fijar la matriz exacta (`v2_n26.3.1_b1.3.14`)
+- El consumidor puede fijar la matriz exacta (`v1_n26.3.1_b1.3.14`)
   o seguir el head con un major+runtime pinned (no recomendado en CI).
 
 ---

@@ -43,7 +43,6 @@ v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 Examples:
 
 - `v1_n26.3.1_b1.3.14`
-- `v2_n26.3.1_b1.3.14`
 - `v1_n28.0.0_b1.5.0`
 
 Meaning:
@@ -60,7 +59,7 @@ For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 Images are published with exact tags only.
 
-- We publish exact tags like `v2_n26.3.1_b1.3.14`.
+- We publish exact tags like `v1_n26.3.1_b1.3.14`.
 - We do not publish `latest`.
 - We do not publish `stable`.
 
@@ -108,13 +107,13 @@ That keeps the container runtime deterministic even when Node bundles change.
 ### Build the image locally
 
 ```bash
-docker build -t cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -f ./Dockerfile ./
+docker build -t cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -f ./Dockerfile ./
 ```
 
 ### Verify the runtime matrix locally
 
 ```bash
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
 ```
 
 Expected output:
@@ -127,19 +126,19 @@ Expected output:
 ### Start an interactive container
 
 ```bash
-docker run --rm -it cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+docker run --rm -it cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 ```
 
 ### Run the image as a non-root user
 
 ```bash
-docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 ```
 
 ### Use it as a base image
 
 ```dockerfile
-FROM cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 
 RUN eval $(fnm env) \
         && fnm use ${NODE_DEFAULT_VERSION} \
@@ -175,11 +174,11 @@ mirrors it directly.
 For the next publication of the current runtime matrix:
 
 ```bash
-docker build -t cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -f ./Dockerfile ./
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
+docker build -t cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -f ./Dockerfile ./
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
 git push origin main
-git tag v2_n26.3.1_b1.3.14
-git push origin v2_n26.3.1_b1.3.14
+git tag v1_n26.3.1_b1.3.14
+git push origin v1_n26.3.1_b1.3.14
 ```
 
 ## Legacy tags
