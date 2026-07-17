@@ -33,7 +33,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     BUN_INSTALL=${BUN_HOME}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip ca-certificates \
+    unzip ca-certificates libatomic1 \
     # Install fnm
     && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
     && mkdir -p ${FNM_BIN} \
@@ -45,8 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && eval $(fnm env) \
     && fnm use ${NODE_DEFAULT_VERSION} \
     && npm install -g npm@${NPM_VERSION} \
-    # Move fnm to the desired location and create a symbolic link to the cache folder
-    && share_config_globally .local/share/fnm --to fnm \
+    && node --version \
+    && npm --version \
     # Install both bun versions (AVX2 optimized and baseline)
     && mkdir -p ${BUN_HOME}/bin \
     # Download AVX2 version
@@ -72,11 +72,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     # Set permissions to 777 for compatibility with CI runners (like v.1.0.7)
     && chmod -R 777 ${BUN_HOME} \
-    # Move bun to the desired location and create a symbolic link to the cache folder
-    && share_config_globally .bun --to bun \
+    && bun --version \
     # Clean run
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* || true
+    && (rm -rf /var/lib/apt/lists/* /tmp/* || true)
 
 # Add to .zshrc the configuration for fnm and bun
 RUN add_text_to_zshrc "$(printf '%s\n' \
