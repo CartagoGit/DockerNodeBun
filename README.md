@@ -16,19 +16,41 @@ Image for charging bun, fnm, node, npm and zsh.
 
 > This dockerfile use [`cartagodocker/zsh`](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
 
+## Versioning
+
+> **Canónico a partir de 2026-07-17.**
+> Ver [VERSIONING.md](./VERSIONING.md) para la política completa.
+>
+> Esquema de tag: `v{N}+n{node MAJOR.MINOR.PATCH}+b{bun MAJOR.MINOR.PATCH}`
+> donde `N` es un contador entero de re-publicaciones para la misma matriz
+> de runtimes.
+
 ## Specifications:
 
-- Zsh
+
+- Zsh (base: `cartagodocker/zsh:latest`)
 - Bun.js 1.3.2 (with automatic AVX2/baseline detection)
-- Fast Node Manader 1.38.1
-- Node 22 lts
+- Fast Node Manager 1.38.1
 - Npm 10.9.0
+
+### Imágenes publicadas
+
+| Tag | Node | Bun | Notas |
+|---|---|---|---|
+| `v1+n26.3.1+b1.3.2` | 26.3.1 | 1.3.2 | próximo release (S2 de x00065) |
+
+### Imagen legacy (no se publica más con este canon)
+
+- Bun.js 1.1.42
+- Node 22 lts
+- Tag legacy: `v.1.1.2` (sigue disponible en DockerHub, no se reescribe)
 
 ## Environments
 
-- NODE_DEFAULT_VERSION=22
+- NODE_DEFAULT_VERSION=26.3.1
 - FNM_HOME=/usr/share/fnm
 - BUN_HOME=/usr/share/bun
+- BUN_INSTALL=/usr/share/bun
 
 You can use this envs to set the default node version and the fnm home in inherited images.
 
@@ -73,10 +95,13 @@ With github actions in repository it will be update automaticatlly in DockerHub 
 
 ## To use in other docker images
 
+> ⚠️ **No se publica `latest`.** Cada consumidor debe fijar la matriz
+> exacta de runtimes. Ver [VERSIONING.md](./VERSIONING.md).
+
 Just add the next line in the Dockerfile to base the other image on this one.
 
 ````Dockerfile 
-FROM cartagodocker/nodebun:latest
+FROM cartagodocker/nodebun:v1+n26.3.1+b1.3.2
 ````
 
 ---

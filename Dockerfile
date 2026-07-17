@@ -2,7 +2,10 @@ FROM cartagodocker/zsh:latest
 USER root
 
 # Versions
-ARG NODE_DEFAULT_VERSION=22
+# Tagging scheme: v{N}+n{node MAJOR.MINOR.PATCH}+b{bun MAJOR.MINOR.PATCH}
+# See VERSIONING.md for the full policy. Bumping either default below
+# requires a new git tag (e.g. v1+n26.3.1+b1.3.2) AND a DockerHub push.
+ARG NODE_DEFAULT_VERSION=26.3.1
 ARG BUN_VERSION=1.3.2
 ARG FNM_VERSION=1.38.1
 
