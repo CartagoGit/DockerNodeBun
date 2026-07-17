@@ -1,138 +1,197 @@
 # DockerNodeBun
 
-## Github
+`cartagodocker/nodebun` is the Beateam base image for Node/Bun development containers.
+It reflects how our containers are actually used in real projects:
 
-https://github.com/CartagoGit/DockerNodeBun
+- `zsh` as the default interactive shell and entrypoint
+- `fnm` to activate the selected Node runtime inside the container
+- `bun` as the default package manager and TypeScript script runner
+- explicit, reproducible image tags for each runtime matrix
 
-## DockerHub
+This image is consumed directly by internal containers such as the `logistics-app`
+build runner.
 
-https://hub.docker.com/repository/docker/cartagodocker/nodebun/general
+## Repository and registry
 
-## Description
+- GitHub: https://github.com/CartagoGit/DockerNodeBun
+- Docker Hub: https://hub.docker.com/repository/docker/cartagodocker/nodebun/general
 
-Image for charging bun, fnm, node, npm and zsh.
+## Base image
 
-> This dockerfile use Ubuntu 24.04
+- Base image: `cartagodocker/zsh:latest`
+- OS family: Ubuntu 24.04
 
-> This dockerfile use [`cartagodocker/zsh`](https://hub.docker.com/repository/docker/cartagodocker/zsh/general) image as base.
+## Current runtime matrix
 
-## Versioning
+The runtime matrix currently prepared in this repository is:
 
-> **Canónico a partir de 2026-07-17.**
-> Ver [VERSIONING.md](./VERSIONING.md) para la política completa.
->
-> Esquema de tag: `v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}`
-> donde `N` es un contador entero de re-publicaciones para la misma matriz
-> de runtimes. (Separador `_` por compatibilidad con el OCI Distribution
-> Spec que DockerHub aplica a los tags.)
+| Component | Version |
+|---|---|
+| Node | `26.3.1` |
+| Bun | `1.3.14` |
+| npm | `12.0.1` |
+| fnm | `1.39.0` |
 
-## Specifications:
+## Tagging model
 
+The canonical tag format is:
 
-- Zsh (base: `cartagodocker/zsh:latest`)
-- Bun.js 1.3.14 (with automatic AVX2/baseline detection)
-- Fast Node Manager 1.39.0
-- Npm 12.0.1
-
-### Imágenes publicadas
-
-| Tag | Node | Bun | Notas |
-|---|---|---|---|
-| `v1_n26.3.1_b1.3.14` | 26.3.1 | 1.3.14 | próximo release (S2 de x00065) |
-
-### Imagen legacy (no se publica más con este canon)
-
-- Bun.js 1.1.42
-- Node 22 lts
-- Tag legacy: `v.1.1.2` (sigue disponible en DockerHub, no se reescribe)
-
-## Environments
-
-- NODE_DEFAULT_VERSION=26.3.1
-- FNM_HOME=/usr/share/fnm
-- BUN_HOME=/usr/share/bun
-- BUN_INSTALL=/usr/share/bun
-
-You can use this envs to set the default node version and the fnm home in inherited images.
-
-For example:
-
-```Dockerfile
-RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}
+```text
+v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 ```
 
-Or if you want change the default node version in the inherited image:
+Examples:
 
-```Dockerfile
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
-ENV NODE_DEFAULT_VERSION=14
+- `v1_n26.3.1_b1.3.14`
+- `v2_n26.3.1_b1.3.14`
+- `v1_n28.0.0_b1.5.0`
+
+Meaning:
+
+- `N` is a republish counter for the same runtime matrix.
+- If Node or Bun changes, the counter resets to `v1`.
+- If the runtime matrix stays the same but the image is republished
+    (workflow fix, packaging fix, container-contract fix, etc.), the counter
+    increases to `v2`, `v3`, and so on.
+
+For the full policy, see [VERSIONING.md](./VERSIONING.md).
+
+## Published image contract
+
+Images are published with exact tags only.
+
+- We publish exact tags like `v2_n26.3.1_b1.3.14`.
+- We do not publish `latest`.
+- We do not publish `stable`.
+
+That is intentional. Consumers must pin the exact runtime matrix they require.
+
+## Environment variables exposed by the image
+
+- `NODE_DEFAULT_VERSION=26.3.1`
+- `FNM_HOME=/usr/share/fnm`
+- `BUN_HOME=/usr/share/bun`
+- `BUN_INSTALL=/usr/share/bun`
+
+## How the image works
+
+### Node activation
+
+Node is installed through `fnm` and activated with:
+
+```bash
+eval $(fnm env)
+fnm use ${NODE_DEFAULT_VERSION}
 ```
 
----
+This must be done in any Docker `RUN` step where `node` or `npm` is needed,
+because `fnm` wires them into `PATH` at shell runtime.
 
-# Usage
+### Bun runtime
 
-## Create Image
+Bun is installed in `/usr/share/bun`.
 
-````bash
-docker build -t nodebun-image -f ./Dockerfile ./
-````
+The image ships two Bun binaries:
 
-## Create debug-container
+- an AVX2-optimized x64 binary
+- a baseline x64 binary
 
-````bash
-docker run --rm -it --name nodebun-container nodebun-image
-````
+The wrapper selects the correct one at runtime depending on CPU capabilities.
 
-## Create debug-container for user 1000:1000
+### npm
 
-````bash
-docker run --rm -it --name nodebun-container --user 1000:1000 nodebun-image
-````
+`npm` is pinned explicitly after the selected Node runtime is activated.
+That keeps the container runtime deterministic even when Node bundles change.
 
-## Upload docker image to dockerhub
+## Typical usage
 
-With github actions in repository it will be update automaticatlly in DockerHub with the tag of branches.
+### Build the image locally
 
-## To use in other docker images
-
-> ⚠️ **No se publica `latest`.** Cada consumidor debe fijar la matriz
-> exacta de runtimes. Ver [VERSIONING.md](./VERSIONING.md).
-
-Just add the next line in the Dockerfile to base the other image on this one.
-
-````Dockerfile 
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
-````
-
----
-
-# For use node in inherited images:
-
-You can use the next line in the Dockerfile to use the default node version:
-
-```Dockerfile
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
-RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}  \
-    && npm --version && node --version
+```bash
+docker build -t cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -f ./Dockerfile ./
 ```
 
-> Important: It is necessary to use `eval $(fnm env)` to assign path to node and npm for the user. And it is necessary to use `fnm use` to set the node version.
+### Verify the runtime matrix locally
 
-Fast node manager works with multishell, it means that you can use different node versions in different shell sessions.
+```bash
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
+```
 
-For that if you want use a new RUN, eval $(fnm env) must be called to assign node and npm to the $PATH fo the user.
+Expected output:
 
-I added an automatic load node for the user in the entrypoint of the .zshrc file. But it necessary understand that if we call a new RUN in Dockerfile the $PATH will be reset, and we must call `eval $(fnm env)` to assign the path to node and npm again.
+- `v26.3.1`
+- `12.0.1`
+- `1.3.14`
+- `fnm 1.39.0`
 
-> Important install dependencies globally with bun, and give permissions to the user you want to use it.
+### Start an interactive container
 
-If you install a dependency with fnm like -> `npm install -g @ionic/cli`, it will be installed just for this shell session. If you want to use it in other shell session, you must install again. Then, I recommend to use bun to install global dependencies to share between shell and user sessions.
+```bash
+docker run --rm -it cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+```
 
----
+### Run the image as a non-root user
 
-# For specific inner scripts:
+```bash
+docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+```
 
-Look the cartagodocker/zsh image documentation in the next link:
+### Use it as a base image
 
-[`cartagodocker/zsh`](https://hub.docker.com/repository/docker/cartagodocker/zsh/general)
+```dockerfile
+FROM cartagodocker/nodebun:v2_n26.3.1_b1.3.14
+
+RUN eval $(fnm env) \
+        && fnm use ${NODE_DEFAULT_VERSION} \
+        && node --version \
+        && npm --version \
+        && bun --version
+```
+
+## Publishing workflow
+
+Publishing is split into two separate workflows.
+
+### 1. Image publication
+
+Workflow: [`.github/workflows/docker-hub-update.yml`](./.github/workflows/docker-hub-update.yml)
+
+- Trigger: push of a git tag matching `v*`
+- Behavior: builds and pushes only the exact tag that was pushed
+- Behavior: does not create or update `latest`
+
+### 2. Docker Hub description sync
+
+Workflow: [`.github/workflows/update-dockerhub-description.yml`](./.github/workflows/update-dockerhub-description.yml)
+
+- Trigger: push to `main` when `README.md` changes
+- Behavior: updates the Docker Hub long description from this README
+
+This is why the README must always describe the real image contract. Docker Hub
+mirrors it directly.
+
+## Recommended release sequence
+
+For the next publication of the current runtime matrix:
+
+```bash
+docker build -t cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -f ./Dockerfile ./
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
+git push origin main
+git tag v2_n26.3.1_b1.3.14
+git push origin v2_n26.3.1_b1.3.14
+```
+
+## Legacy tags
+
+Legacy semver-like tags such as `v.1.1.2` remain available for historical
+consumers, but they are no longer the canonical contract for this image.
+
+## Canonical consumer
+
+The canonical consumer in this workspace family is:
+
+- `logistics-app/tools/docker/Dockerfile`
+
+That consumer must always be updated to the exact `nodebun` tag that matches the
+runtime matrix it expects.
