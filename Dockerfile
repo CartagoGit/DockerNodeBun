@@ -4,9 +4,9 @@ USER root
 # Versions
 # Tagging scheme: v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 # See VERSIONING.md for the full policy. Bumping either default below
-# requires a new git tag (e.g. v1_n26.3.1_b1.3.2) AND a DockerHub push.
+# requires a new git tag (e.g. v1_n26.3.1_b1.3.14) AND a DockerHub push.
 ARG NODE_DEFAULT_VERSION=26.3.1
-ARG BUN_VERSION=1.3.2
+ARG BUN_VERSION=1.3.14
 ARG FNM_VERSION=1.39.0
 ARG NPM_VERSION=12.0.1
 

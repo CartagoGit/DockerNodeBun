@@ -37,8 +37,8 @@ Donde:
 | Tag | Significado |
 |---|---|
 | `v1_n22.12.0_b1.1.42` | Estado actual de la imagen legacy (no se publica con este canon) |
-| `v1_n26.3.1_b1.3.2` | **Próximo tag** (S2 de x00065) — primera publicación con Node 26 + bun 1.3.2 |
-| `v2_n26.3.1_b1.3.2` | Rebuild futuro de la misma matriz (p. ej. fix en `scripts/`) |
+| `v1_n26.3.1_b1.3.14` | **Próximo tag** (S2 de x00065) — primera publicación con Node 26 + bun 1.3.14 |
+| `v2_n26.3.1_b1.3.14` | Rebuild futuro de la misma matriz (p. ej. fix en `scripts/`) |
 | `v1_n28.0.0_b1.5.0` | Cuando salga Node 28 LTS — contador reinicia a `v1` |
 | `v1_n26.3.1_b1.4.0` | Bump de bun a 1.4.0 — contador reinicia a `v1` |
 
@@ -52,13 +52,13 @@ Donde:
 2. **El runtime siempre es 3 segmentos.** No se acorta a `n26` o `b1.3`
    porque el patch importa:
    - Node 26.3.0 → 26.3.1 suele traer fixes de V8 (CVEs, optimizaciones JIT).
-   - Bun 1.3.0 → 1.3.2 trae fixes del loader TS y `Bun.sql` cambios sutiles.
+   - Bun 1.3.0 → 1.3.14 trae fixes acumulados del loader TS y tooling (`bun upgrade`, resolver, installer) relevantes para este repo.
 3. **Self-describing**: el tag codifica exactamente qué runtime arranca.
    No hay que abrir el Dockerfile para saber qué hay dentro.
 4. **Orden lexicográfico = orden cronológico** dentro de cada matriz.
 5. **Grepable**:
    ```bash
-   git tag -l "v*_n26.3.1_b1.3.2*"  # todas las re-publicaciones de esa matriz
+   git tag -l "v*_n26.3.1_b1.3.14*"  # todas las re-publicaciones de esa matriz
    git tag -l "v*_n26*"             # todas las imágenes de Node 26.x
    ```
 6. **Sin colisión con semver**: el `v` aquí es un contador de un solo
@@ -87,7 +87,7 @@ Los tags `v.1.0.0` … `v.1.1.2` existentes **NO se reescriben**:
 - **Rebuild de la misma matriz** (fix en `scripts/`, bump de imagen base,
    limpieza de caché, etc.) → `v2_...`, `v3_...`, etc. **Sin tocar runtime**.
 - **Cambio de major de node o bun** → `v1_...` con la nueva matriz.
-- El consumidor puede fijar la matriz exacta (`v1_n26.3.1_b1.3.2`)
+- El consumidor puede fijar la matriz exacta (`v1_n26.3.1_b1.3.14`)
   o seguir el head con un major+runtime pinned (no recomendado en CI).
 
 ---

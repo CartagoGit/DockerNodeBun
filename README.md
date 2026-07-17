@@ -30,7 +30,7 @@ Image for charging bun, fnm, node, npm and zsh.
 
 
 - Zsh (base: `cartagodocker/zsh:latest`)
-- Bun.js 1.3.2 (with automatic AVX2/baseline detection)
+- Bun.js 1.3.14 (with automatic AVX2/baseline detection)
 - Fast Node Manager 1.39.0
 - Npm 12.0.1
 
@@ -38,7 +38,7 @@ Image for charging bun, fnm, node, npm and zsh.
 
 | Tag | Node | Bun | Notas |
 |---|---|---|---|
-| `v1_n26.3.1_b1.3.2` | 26.3.1 | 1.3.2 | próximo release (S2 de x00065) |
+| `v1_n26.3.1_b1.3.14` | 26.3.1 | 1.3.14 | próximo release (S2 de x00065) |
 
 ### Imagen legacy (no se publica más con este canon)
 
@@ -64,7 +64,7 @@ RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}
 Or if you want change the default node version in the inherited image:
 
 ```Dockerfile
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.2
+FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 ENV NODE_DEFAULT_VERSION=14
 ```
 
@@ -102,7 +102,7 @@ With github actions in repository it will be update automaticatlly in DockerHub 
 Just add the next line in the Dockerfile to base the other image on this one.
 
 ````Dockerfile 
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.2
+FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 ````
 
 ---
@@ -112,7 +112,7 @@ FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.2
 You can use the next line in the Dockerfile to use the default node version:
 
 ```Dockerfile
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.2
+FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
 RUN eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION}  \
     && npm --version && node --version
 ```
