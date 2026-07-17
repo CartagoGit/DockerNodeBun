@@ -13,7 +13,7 @@
 ## Esquema vigente
 
 ```
-v{N}+n{node MAJOR.MINOR.PATCH}+b{bun MAJOR.MINOR.PATCH}
+v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 ```
 
 Donde:
@@ -25,18 +25,22 @@ Donde:
 - **`n{x.y.z}`** y **`b{x.y.z}`** son siempre tres segmentos
   (MAJOR.MINOR.PATCH). Nunca se acortan, porque el patch importa:
   CVEs de V8 en Node y fixes del loader TS en bun justifican el patch.
-- El separador `+` se toma de Debian y PEP 440: herramientas estándar
-  (`dpkg`, `pip`, `npm semver`) lo parsean correctamente.
+- El separador `_` (underscore) se eligió por **compatibilidad con el
+  OCI Distribution Spec** que DockerHub y la mayoría de registries aplican
+  a los tags (regex `[a-z0-9][a-z0-9._-]{0,127}`). El `+` (estilo
+  Debian/PEP 440) es más familiar pero DockerHub lo rechaza con
+  `invalid reference format`. El `_` se parsea correctamente en todas
+  las herramientas que importan (Bash, regex, `sort`, `git tag -l`).
 
 ### Ejemplos
 
 | Tag | Significado |
 |---|---|
-| `v1+n22.12.0+b1.1.42` | Estado actual de la imagen legacy (no se publica con este canon) |
-| `v1+n26.3.1+b1.3.2` | **Próximo tag** (S2 de x00065) — primera publicación con Node 26 + bun 1.3.2 |
-| `v2+n26.3.1+b1.3.2` | Rebuild futuro de la misma matriz (p. ej. fix en `scripts/`) |
-| `v1+n28.0.0+b1.5.0` | Cuando salga Node 28 LTS — contador reinicia a `v1` |
-| `v1+n26.3.1+b1.4.0` | Bump de bun a 1.4.0 — contador reinicia a `v1` |
+| `v1_n22.12.0_b1.1.42` | Estado actual de la imagen legacy (no se publica con este canon) |
+| `v1_n26.3.1_b1.3.2` | **Próximo tag** (S2 de x00065) — primera publicación con Node 26 + bun 1.3.2 |
+| `v2_n26.3.1_b1.3.2` | Rebuild futuro de la misma matriz (p. ej. fix en `scripts/`) |
+| `v1_n28.0.0_b1.5.0` | Cuando salga Node 28 LTS — contador reinicia a `v1` |
+| `v1_n26.3.1_b1.4.0` | Bump de bun a 1.4.0 — contador reinicia a `v1` |
 
 ### Por qué este esquema
 
@@ -54,8 +58,8 @@ Donde:
 4. **Orden lexicográfico = orden cronológico** dentro de cada matriz.
 5. **Grepable**:
    ```bash
-   git tag -l "v*n26.3.1+b1.3.2*"  # todas las re-publicaciones de esa matriz
-   git tag -l "v*n26*"             # todas las imágenes de Node 26.x
+   git tag -l "v*_n26.3.1_b1.3.2*"  # todas las re-publicaciones de esa matriz
+   git tag -l "v*_n26*"             # todas las imágenes de Node 26.x
    ```
 6. **Sin colisión con semver**: el `v` aquí es un contador de un solo
    dígito natural (1, 2, 3, …), nada que ver con `v1.2.0` tradicional.
@@ -78,12 +82,12 @@ Los tags `v.1.0.0` … `v.1.1.2` existentes **NO se reescriben**:
 
 ## Política de bump
 
-- **Cambio de cualquier dígito de node o bun** → `v1+...` (el contador
+- **Cambio de cualquier dígito de node o bun** → `v1_...` (el contador
   reinicia porque cambia la matriz de runtimes).
 - **Rebuild de la misma matriz** (fix en `scripts/`, bump de imagen base,
-  limpieza de caché, etc.) → `v2+...`, `v3+...`, etc. **Sin tocar runtime**.
-- **Cambio de major de node o bun** → `v1+...` con la nueva matriz.
-- El consumidor puede fijar la matriz exacta (`v1+n26.3.1+b1.3.2`)
+   limpieza de caché, etc.) → `v2_...`, `v3_...`, etc. **Sin tocar runtime**.
+- **Cambio de major de node o bun** → `v1_...` con la nueva matriz.
+- El consumidor puede fijar la matriz exacta (`v1_n26.3.1_b1.3.2`)
   o seguir el head con un major+runtime pinned (no recomendado en CI).
 
 ---
@@ -121,7 +125,7 @@ FROM cartagodocker/nodebun:v.1.1.2
 deben migrar a:
 
 ```dockerfile
-FROM cartagodocker/nodebun:v1+n<SU-NODE>+b<SU-BUN>
+FROM cartagodocker/nodebun:v1_n<SU-NODE>_b<SU-BUN>
 ```
 
 El consumidor canónico de este repo es
@@ -136,9 +140,9 @@ slice **S3**.
 
 | Antes | Ahora | Por qué |
 |---|---|---|
-| `v.1.1.2` (semver) | `v1+n22.12.0+b1.1.42` (canon nuevo) | Self-describing, no opaco |
+| `v.1.1.2` (semver) | `v1_n22.12.0_b1.1.42` (canon nuevo) | Self-describing, no opaco |
 | `v` con tres niveles | `v{N}` con un dígito | Contador, no semver |
-| `Bun.js 1.1.42` en README | `v1+n...+b1.1.42` en tag | Fuente de verdad única |
+| `Bun.js 1.1.42` en README | `v1_n..._b1.1.42` en tag | Fuente de verdad única |
 | Imágenes con `latest` | Imágenes con matriz exacta | Builds reproducibles |
 
 ---
@@ -147,6 +151,6 @@ slice **S3**.
 
 | Fecha | Decisión | Origen |
 |---|---|---|
-| 2026-07-17 | Adopción del canon `v{N}+n{node}+b{bun}` | `x00065` S2 |
+| 2026-07-17 | Adopción del canon `v{N}_n{node}_b{bun}` (separador `_` por OCI) | `x00065` S2 |
 | 2026-07-17 | Política de no-rewrite de tags legacy | `x00065` |
 | 2026-07-17 | Sin tags `latest`/`stable` | `x00065` |

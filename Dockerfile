@@ -2,12 +2,13 @@ FROM cartagodocker/zsh:latest
 USER root
 
 # Versions
-# Tagging scheme: v{N}+n{node MAJOR.MINOR.PATCH}+b{bun MAJOR.MINOR.PATCH}
+# Tagging scheme: v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 # See VERSIONING.md for the full policy. Bumping either default below
-# requires a new git tag (e.g. v1+n26.3.1+b1.3.2) AND a DockerHub push.
+# requires a new git tag (e.g. v1_n26.3.1_b1.3.2) AND a DockerHub push.
 ARG NODE_DEFAULT_VERSION=26.3.1
 ARG BUN_VERSION=1.3.2
-ARG FNM_VERSION=1.38.1
+ARG FNM_VERSION=1.39.0
+ARG NPM_VERSION=12.0.1
 
 ARG SHARE_HOME=/usr/share
 ARG BIN_HOME=/usr/local/bin
@@ -41,6 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fnm completions --shell zsh > ${FNM_BIN}/_fnm \
     && fnm install ${NODE_DEFAULT_VERSION} \
     && fnm default ${NODE_DEFAULT_VERSION} \
+    && eval $(fnm env) \
+    && fnm use ${NODE_DEFAULT_VERSION} \
+    && npm install -g npm@${NPM_VERSION} \
     # Move fnm to the desired location and create a symbolic link to the cache folder
     && share_config_globally .local/share/fnm --to fnm \
     # Install both bun versions (AVX2 optimized and baseline)
