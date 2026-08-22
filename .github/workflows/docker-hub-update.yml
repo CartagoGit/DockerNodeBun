@@ -41,6 +41,11 @@ jobs:
         # (GitHub esta deprecando Node 20 en actions/checkout v4.x).
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          fetch-depth: 0     # full history (necesario para que el refspec
+                              # del tag funcione con actions/checkout v5+).
+                              # Con depth=1 falla cuando el tag apunta
+                              # directamente al commit (Cannot fetch both
+                              # X and refs/tags/vX.Y.Z to refs/tags/vX.Y.Z).
           fetch-tags: true  # para que git rev-parse vea todos los tags remotos
 
       - name: Set up Docker Buildx
