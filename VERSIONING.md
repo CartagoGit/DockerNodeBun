@@ -327,6 +327,80 @@ Si necesitas construir imágenes localmente (sin tag trigger):
 
 ---
 
+## Breakpoints (marcadores estructurales del repo)
+
+Un **breakpoint** es un tag git puro (`breakpoint_v{X.Y.Z}`) que
+marca un commit específico del repo como una **rotura estructural
+de cómo funciona el repo**. Es ortogonal al versionado `v{X.Y.Z}`:
+
+- `v{X.Y.Z}` = correcciones del repo / runtime matrix.
+- `breakpoint_v{X.Y.Z}` = "este commit representa un antes/después
+  en la arquitectura del repo".
+
+Dimensiones que registra cada breakpoint:
+
+- **Cuándo**: el commit timestamp.
+- **Qué VERSION introdujo el cambio**: el sufijo `vX.Y.Z`.
+- **Por qué**: el mensaje del tag describe la rotura.
+
+### Cuándo crear un breakpoint
+
+Crear un breakpoint **solo cuando el commit representa una rotación
+real** de la arquitectura, por ejemplo:
+
+- Cambio del modelo de publicación (ej. este commit:
+  `tag trigger + manifesto`, antes eran N ramas paralelas).
+- Cambio de contrato del wrapper.
+- Migración del base image.
+- Cambio del esquema de versionado (ej. esquema 2 → esquema 3).
+
+NO crear un breakpoint para:
+
+- Bump rutinario de `X.Y.Z` (bugfix sin cambio de contrato).
+- Bump de runtime (node, bun, fnm, npm) sin rotura de contrato.
+- Cambios puramente cosméticos o de docs.
+
+### Cómo crearlo
+
+Usa el script `scripts/tag-breakpoint.sh`:
+
+```bash
+# Ejemplo: tras tagear v1.0.1, marcar el commit como breakpoint
+scripts/tag-breakpoint.sh 1.0.1 "New publishing model: tag trigger + manifesto"
+git push origin v1.0.1 breakpoint_v1.0.1
+```
+
+El script:
+
+1. Verifica que `v{X.Y.Z}` existe localmente.
+2. Verifica que `breakpoint_v{X.Y.Z}` NO existe (evita duplicados).
+3. Crea el tag `breakpoint_v{X.Y.Z}` apuntando al mismo commit.
+4. **NO** pushea automáticamente — eso lo decides tú.
+
+### Cómo consultarlos en el futuro
+
+```bash
+# Lista de breakpoints, más reciente primero:
+git tag -l 'breakpoint_*' --sort=-creatordate
+
+# Timeline cronológico de las roturas estructurales:
+git log --oneline --tags='breakpoint_*' --topo-order
+
+# Detalle de un breakpoint concreto:
+git show breakpoint_v1.0.1
+```
+
+### Recordatorio automático
+
+El job `breakpoint-reminder` en
+`.github/workflows/docker-hub-update.yml` emite un `::notice::` en
+el run del workflow cuando se publica un tag trigger `v{X.Y.Z}` sin
+su breakpoint correspondiente. **No crea** el breakpoint — esa es
+una decisión humana. Es solo un recordatorio para no olvidarlo en
+los releases estructurales.
+
+---
+
 ## Migración de consumidores
 
 Los consumidores que actualmente hacen:
@@ -375,3 +449,4 @@ significado del segmento `v*`: pasó de "contador de republish" a
 | 2026-08-22 | `X.Y.Z` se publica en paralelo en todas las matrices | Permite comparar correcciones entre imágenes de distintos runtimes |
 | 2026-08-22 | Modelo "tag trigger + manifesto" (`.github/matrices.yml`) | El workflow itera el manifesto y publica una imagen por matriz activa. Elimina la dependencia de ramas paralelas como fuente de runtime. |
 | 2026-08-22 | `X.Y.Z` inicial = `1.0.1` (saltándose `1.0.0`) | Evita colisión visual con tags legacy `v1_*` del esquema 2 |
+| 2026-08-22 | Sistema de `breakpoint_v{X.Y.Z}` para roturas estructurales del repo | Permite localizar commits estructurales del repo (refactors mayores, cambios de contrato) en cualquier momento futuro, ortogonal al versionado X.Y.Z |

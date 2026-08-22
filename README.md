@@ -172,6 +172,57 @@ RUN eval $(fnm env) \
         && bun --version
 ```
 
+## Structural breakpoints (repo milestones)
+
+A **breakpoint** is a structural marker on the repo itself, not on DockerHub. It tags a
+specific commit that represents a **structural break** of how the repo works (a major
+refactor, a contract change, a new architecture) — orthogonal to the runtime/runtime
+versioning.
+
+Breakpoints are pure **git tags** with the format:
+
+```text
+breakpoint_v{X.Y.Z}
+```
+
+They always point to the **same commit** as `v{X.Y.Z}` — the VERSION embedded in the
+tag tells you which release introduced that structural break.
+
+### Why breakpoints exist
+
+In 10 years, when someone asks "how did the publishing model change over time?", they can:
+
+```bash
+git log --oneline --tags='breakpoint_*' --topo-order
+```
+
+and see every structural break in chronological order, with the VERSION at the time and
+the commit message explaining what changed.
+
+### How to create a breakpoint
+
+When you tag a release `v1.0.1` that you consider a structural break:
+
+```bash
+scripts/tag-breakpoint.sh 1.0.1 "New publishing model: tag trigger + manifesto"
+git push origin v1.0.1 breakpoint_v1.0.1
+```
+
+The script refuses to create a duplicate breakpoint tag (you'd have to delete and
+re-create if the version changes after the fact).
+
+A GitHub Actions job (`breakpoint-reminder` in `docker-hub-update.yml`) **does NOT**
+auto-create the breakpoint — that's a human decision. But it logs a `::notice::` in
+the workflow run when a trigger tag `vX.Y.Z` is published without a matching
+`breakpoint_vX.Y.Z`, so you don't forget.
+
+### Listing breakpoints
+
+```bash
+git tag -l 'breakpoint_*'           # all breakpoint tags, newest first
+git log --oneline breakpoint_v1.0.1  # see the structural commit
+```
+
 ## Publishing workflow
 
 Publishing is split into two separate workflows.

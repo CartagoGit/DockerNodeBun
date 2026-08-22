@@ -28,12 +28,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docker inspect` muestre la versión de correcciones aplicada.
   Valor inicial elegido en `1.0.1` (saltándose `1.0.0`) para evitar
   colisión visual con los tags legacy `v1_*` del esquema 2.
+- **Concepto de "breakpoint" introducido**: tags `breakpoint_v{X.Y.Z}`
+  marcan commits estructurales del repo, ortogonales a la dimensión
+  VERSION. El primer breakpoint será `breakpoint_v1.0.1`, que coincide
+  con la migración al modelo "tag trigger + manifesto". En el futuro,
+  `git log --oneline --tags='breakpoint_*'` listará todas las roturas
+  estructurales con su VERSION al lado.
 
 ### Added
 - **`.github/matrices.yml`**: manifesto canónico de las matrices activas
   (status: active) y deprecadas (status: deprecated). Es la única
   fuente de verdad sobre qué imágenes publica el workflow. Añadir o
   quitar una matriz es un commit a este archivo, sin tocar código.
+- **`scripts/tag-breakpoint.sh`**: helper para crear tags
+  `breakpoint_v{X.Y.Z}` que apuntan al mismo commit que `v{X.Y.Z}`.
+  Los breakpoints marcan roturas estructurales del repo (refactors
+  mayores, cambios de contrato), ortogonales al versionado X.Y.Z.
+  No pushea automáticamente — es decisión del mantenedor.
+- **Job `breakpoint-reminder`** en `docker-hub-update.yml`: emite
+  `::notice::` cuando se publica un tag trigger `v{X.Y.Z}` sin su
+  `breakpoint_v{X.Y.Z}` correspondiente. No crea el breakpoint
+  automáticamente — solo recuerda.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
