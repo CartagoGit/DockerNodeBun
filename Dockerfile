@@ -8,9 +8,20 @@ FROM cartagodocker/zsh:v1.0.2
 USER root
 
 # Versions
-# Tagging scheme: v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
-# See VERSIONING.md for the full policy. Bumping either default below
-# requires a new git tag (e.g. v1_n26.3.1_b1.3.14) AND a DockerHub push.
+# Tagging scheme: v{X.Y.Z}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
+# See VERSIONING.md for the full policy. X.Y.Z es el contador semver
+# ligero de las correcciones del repo (lo que cambia son los archivos
+# versionados: Dockerfile, wrapper, workflows, docs). Se publica en
+# TODAS las matrices en paralelo.
+#
+# Single source of truth:
+#   - VERSION (X.Y.Z) se declara aqui como ARG.
+#   - El workflow de GitHub Actions lo pasa como --build-arg VERSION.
+#   - Se exporta como ENV dentro de la imagen para que `docker inspect`
+#     muestre la version de correcciones aplicada.
+#   - Para bumpear: editar este ARG default + commitear + tag con el
+#     mismo X.Y.Z en todas las matrices.
+ARG VERSION=1.0.0
 ARG NODE_DEFAULT_VERSION=26.3.1
 ARG BUN_VERSION=1.3.14
 ARG FNM_VERSION=1.39.0
@@ -33,6 +44,11 @@ COPY ./scripts ${BIN_HOME}
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${BUN_BIN}:${FNM_BIN}:${PATH} \
+    # Single source of truth para el contador de correcciones del repo
+    # (esquema v{X.Y.Z}). Se inyecta via --build-arg VERSION=X.Y.Z en
+    # el workflow. Tambien expuesto en ENV para que 'docker inspect'
+    # lo muestre sin parsear tags.
+    VERSION=${VERSION} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
     FNM_BIN=${FNM_BIN} \
     BUN_HOME=${BUN_HOME} \

@@ -76,7 +76,26 @@ jobs:
       - name: Build Docker image
         if: steps.check.outputs.exists != 'true'
         run: |
-          docker build -t "${{ env.IMAGE_TAG }}" .
+          # Parsear el tag para extraer X.Y.Z (el primer segmento
+          # antes del primer '_'). Formato esperado (esquema 3):
+          #   v1.0.0_n22.21.1_b1.3.14
+          #   v1.0.0_n26.3.1_b1.3.14
+          # VERSION es el contador semver ligero de correcciones
+          # del repo. Se inyecta como --build-arg para que el
+          # Dockerfile lo vea y lo exponga como ENV VERSION.
+          #
+          # Si el tag no matchea, fallamos loud (antes el workflow
+          # hubiera pusheado una imagen sin VERSION inyectada).
+          if [[ ! "${{ env.VERSION_TAG }}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)_ ]]; then
+            echo "Error: tag '${{ env.VERSION_TAG }}' does not match scheme v{X.Y.Z}_n..._b..." >&2
+            echo "       See VERSIONING.md for the policy. Legacy tags (v{N}_n..._b... or v.MAJOR.MINOR.PATCH) are not accepted." >&2
+            exit 1
+          fi
+          VERSION="${BASH_REMATCH[1]}"
+          echo "Extracted VERSION=$VERSION from tag ${{ env.VERSION_TAG }}"
+          docker build \
+            --build-arg VERSION="$VERSION" \
+            -t "${{ env.IMAGE_TAG }}" .
 
       - name: Push Docker image
         if: steps.check.outputs.exists != 'true'

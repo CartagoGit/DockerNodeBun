@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Tag scheme migrated to `v{X.Y.Z}_n..._b...`** (esquema 3, vigente desde
+  2026-08-22). `X.Y.Z` es un semver ligero de las **correcciones del repo**
+  (Dockerfile, wrapper, workflows, docs), separado de la **matriz de
+  runtime** `n..._b...`. Esto permite saber si dos imágenes comparten
+  correcciones solo mirando el tag, sin importar la matriz.
+- **`ARG VERSION=1.0.0` added to Dockerfile** as single source of truth
+  para `X.Y.Z`. Se inyecta como `--build-arg VERSION=X.Y.Z` desde
+  `.github/workflows/docker-hub-update.yml` (que parsea el tag con
+  bash regex), y se exporta como `ENV VERSION=${VERSION}` para que
+  `docker inspect` muestre la versión de correcciones aplicada.
+
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
   `bun_original`'s exit code via `exit "${bun_original_exit:-0}"`. Previously the
@@ -14,10 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caused jobs to be marked as successful even when bun failed (compounded by
   stale artifacts in `build/`).
 - **Wrapper global-install detection**: detection now covers `bun add -g`,
-  `bun add --global`, `bun a -g`, `bun a --global` (in addition to the legacy
-  `bun install -g`). Previously `chmod -R 777 /usr/share/bun` only ran on the
-  exact `i`/`install` subcommand, leaving modern installs with restrictive
-  permissions on the share folder.
+  `bun add --global`, `bun a -g`, `bun a --global`, `-G`, `--global=true`,
+  `--global=false` (in addition to the legacy `bun install -g`). Previously
+  `chmod -R 777 /usr/share/bun` only ran on the exact `i`/`install`
+  subcommand, leaving modern installs with restrictive permissions on the
+  share folder.
 - **Wrapper logs to stderr**: `Running bun_wrapper.sh ...` and
   `Giving permissions ...` messages moved from stdout to stderr. Previously
   they contaminated the output of any caller that piped or parsed
@@ -31,10 +44,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dockerfile redundant `fnm use` removed**: `fnm default ${NODE_DEFAULT_VERSION}`
   already establishes the default; the following `fnm use` was a no-op.
 
-### Changed
+### Changed (infra)
 - **`.dockerignore` populated**: previously empty, now excludes `.git`, `.github`,
   `.vscode`, `*.md`, `LICENSE` and other non-essential files from the build
   context.
+- **`.gitignore` populated**: previously empty, now excludes `.DS_Store`,
+  `.swp`, `*.bak`, `*.log`, etc.
+- **GH Actions pinned to SHA** (supply-chain security): checkout,
+  setup-buildx, login-action ahora referencian SHA inmutables
+  en lugar de tags movibles.
+- **GH Actions upgraded**: `docker/setup-buildx-action@v3` ->
+  `v4.3.0`, `docker/login-action@v3` -> `v4.6.0`.
+- **Workflow dispatch**: `docker-hub-update.yml` ahora acepta un input
+  `tag_name` para builds manuales, y valida que el tag matchee el
+  nuevo esquema `v{X.Y.Z}_n..._b...`.
+- **Workflow JSON serialization**: `update-dockerhub-description.yml`
+  ahora construye el payload con `jq --rawfile` + `--data-binary` en
+  vez de embeber el JSON inline con `-d` (mas robusto ante
+  caracteres especiales en el README).
 
 ## [1.1.2] - 2025-11-12
 
