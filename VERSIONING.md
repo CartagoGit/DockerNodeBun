@@ -63,33 +63,33 @@ comparando solo el tag.
 
 El nuevo esquema separa las dos dimensiones:
 
-- `v1.0.0_n22.21.1_b1.3.14` y `v1.0.0_n26.3.1_b1.3.14` tienen
+- `v1.0.1_n22.21.1_b1.3.14` y `v1.0.1_n26.3.1_b1.3.14` tienen
   **exactamente las mismas correcciones aplicadas al repo** pero
   distintos runtimes.
-- `v1.0.0_n22.21.1_b1.3.14` y `v1.0.1_n22.21.1_b1.3.14` tienen el
+- `v1.0.1_n22.21.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` tienen el
   mismo runtime pero distintas correcciones del wrapper/Dockerfile.
-- `v1.0.0_n26.3.1_b1.3.14` y `v1.0.1_n22.21.1_b1.3.14` difieren
+- `v1.0.1_n26.3.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` difieren
   en ambos ejes — son imágenes completamente distintas.
 
 ### Ejemplos
 
 | Tag | Significado |
 |---|---|
-| `v1.0.0_n22.21.1_b1.3.14` | Primer release del repo, matriz Node 22 LTS |
-| `v1.0.0_n26.3.1_b1.3.14` | Mismo release, matriz Node 26 |
-| `v1.0.1_n22.21.1_b1.3.14` | Bugfix del wrapper, matriz Node 22 |
-| `v1.0.1_n26.3.1_b1.3.14` | Mismo bugfix del wrapper, matriz Node 26 |
+| `v1.0.1_n22.21.1_b1.3.14` | Primer release del repo, matriz Node 22 LTS |
+| `v1.0.1_n26.3.1_b1.3.14` | Mismo release, matriz Node 26 |
+| `v1.0.2_n22.21.1_b1.3.14` | Bugfix del wrapper, matriz Node 22 |
+| `v1.0.2_n26.3.1_b1.3.14` | Mismo bugfix del wrapper, matriz Node 26 |
 | `v1.1.0_n22.21.1_b1.3.14` | Feature nuevo (ej. nuevo binario en PATH), matriz Node 22 |
 | `v2.0.0_n22.21.1_b1.3.14` | Cambio incompatible (ej. drop de Node 18 si se anade), matriz Node 22 |
-| `v1.0.0_n28.0.0_b1.5.0` | Cuando salga Node 28 + bun 1.5 — contador vuelve a `v1.0.0` |
-| `v1.0.0_n26.3.1_b1.4.0` | Bump de bun a 1.4 — contador vuelve a `v1.0.0` |
+| `v1.0.1_n28.0.0_b1.5.0` | Cuando salga Node 28 + bun 1.5 — X.Y.Z se mantiene en `v1.0.1` |
+| `v1.0.1_n26.3.1_b1.4.0` | Bump de bun a 1.4 — X.Y.Z se mantiene en `v1.0.1` |
 
 ### Comandos utiles
 
 ```bash
 git tag -l "v*_n22.21.1*"             # todas las imagenes con matriz node 22
 git tag -l "v*_n26.3.1*"             # todas las imagenes con matriz node 26
-git tag -l "v1.0.0_*"                # todas las imagenes con mismas correcciones v1.0.0
+git tag -l "v1.0.1_*"                # todas las imagenes con mismas correcciones v1.0.1
 git tag -l "v1.*_n22*"               # correcciones v1.x sobre node 22 (cualquier minor/patch)
 ```
 
@@ -98,7 +98,7 @@ git tag -l "v1.*_n22*"               # correcciones v1.x sobre node 22 (cualquie
 | Tag | Significado |
 |---|---|
 | `v1_n22.12.0_b1.1.42` | Estado legacy (no se publica con el nuevo canon, ver "Tags legacy" abajo) |
-| `v1.0.0_n22.21.1_b1.3.14` | Canon vigente: correcciones v1.0.0 + matriz Node 22 |
+| `v1.0.1_n22.21.1_b1.3.14` | Canon vigente: correcciones v1.0.1 + matriz Node 22 |
 
 ### Por qué el v{X.Y.Z} es semver ligero (no contador de "republish")
 
@@ -151,7 +151,7 @@ Tags `v{X.Y.Z}_n..._b...` (semver ligero, este documento).
 > ⚠️ Distincion visual:
 > - Esquema 1: `v.1.1.2` (con punto, 3 niveles)
 > - Esquema 2: `v4_n26.3.1_b1.3.14` (1 nivel despues de `v`)
-> - Esquema 3: `v1.0.0_n26.3.1_b1.3.14` (3 niveles despues de `v`)
+> - Esquema 3: `v1.0.1_n26.3.1_b1.3.14` (3 niveles despues de `v`)
 
 ---
 
@@ -195,20 +195,20 @@ Bumpear cuando cambia node, bun, fnm o npm:
 ### Reglas combinadas
 
 - Cambio solo de runtime (ej. node 22.21.1 → 22.21.2, fix de V8) →
-  mismo `X.Y.Z`, sufijo `n` cambia. Ej: `v1.0.0_n22.21.1_b1.3.14` →
-  `v1.0.0_n22.21.2_b1.3.14`.
+  mismo `X.Y.Z`, sufijo `n` cambia. Ej: `v1.0.1_n22.21.1_b1.3.14` →
+  `v1.0.1_n22.21.2_b1.3.14`.
 - Cambio solo de correcciones (ej. wrapper bugfix) → `Z` sube,
-  sufijo `n..._b...` igual. Ej: `v1.0.0_n22.21.1_b1.3.14` →
-  `v1.0.1_n22.21.1_b1.3.14`.
+  sufijo `n..._b...` igual. Ej: `v1.0.1_n22.21.1_b1.3.14` →
+  `v1.0.2_n22.21.1_b1.3.14`.
 - Cambio de runtime Y de correcciones → ambos suben.
-- Cambio de major de node o bun → `X` reinicia a `1`, sufijo cambia.
-  Ej: `v1.0.0_n22.21.1_b1.3.14` → `v1.0.0_n28.0.0_b1.5.0`.
+- Cambio de major de node o bun → `X` se mantiene en `1`, sufijo cambia.
+  Ej: `v1.0.1_n22.21.1_b1.3.14` → `v1.0.1_n28.0.0_b1.5.0`.
 
 ### Política para consumidores
 
-- Fijar la tripleta exacta: `v1.0.0_n22.21.1_b1.3.14`.
+- Fijar la tripleta exacta: `v1.0.1_n22.21.1_b1.3.14`.
 - Wildcard por matriz: `v*_n22.21.1_b1.3.14` (cualquier correccion).
-- Wildcard por correccion: `v1.0.0_*` (cualquier matriz).
+- Wildcard por correccion: `v1.0.1_*` (cualquier matriz).
 - Wildcard total: `v*` (no recomendado, todo cambia).
 
 ---
@@ -220,7 +220,7 @@ Bumpear cuando cambia node, bun, fnm o npm:
 `X.Y.Z` se declara como `ARG VERSION` en el `Dockerfile`:
 
 ```dockerfile
-ARG VERSION=1.0.0
+ARG VERSION=1.0.1
 ```
 
 Y se exporta como `ENV VERSION=${VERSION}` para que `docker inspect`
@@ -247,9 +247,9 @@ Cada vez que se publique un tag nuevo, se hace en este orden:
 1. **Editar el ARG VERSION del Dockerfile**:
    ```bash
    # Cambiar:
-   ARG VERSION=1.0.0
-   # A:
    ARG VERSION=1.0.1
+   # A:
+   ARG VERSION=1.0.2
    ```
 2. **Commitear el bump + taggear en todas las matrices que apliquen**:
    ```bash
@@ -296,7 +296,7 @@ slice **S3**.
 
 | Antes (esquema 2) | Ahora (esquema 3) | Por qué |
 |---|---|---|
-| `v4_n26.3.1_b1.3.14` (contador N) | `v1.0.0_n26.3.1_b1.3.14` (semver ligero X.Y.Z) | Separa "correcciones del repo" de "publicación de la misma matriz" |
+| `v4_n26.3.1_b1.3.14` (contador N) | `v1.0.1_n26.3.1_b1.3.14` (semver ligero X.Y.Z) | Separa "correcciones del repo" de "publicación de la misma matriz" |
 | `N` mezclaba dos dimensiones | `X.Y.Z` = correcciones, `n..._b...` = runtime | Se puede saber si dos imágenes tienen las mismas correcciones mirando el tag |
 | `v{N}` un solo dígito | `v{X.Y.Z}` tres dígitos (semver) | Más expresivo, escala mejor con el tiempo |
 

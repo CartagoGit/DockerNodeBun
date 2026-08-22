@@ -35,7 +35,7 @@ maintained on its own branch:
 
 Both branches share the same wrapper fixes (exit code propagation,
 global-install detection, stderr logging). To consume either, pin the
-corresponding tag (e.g. `v1.0.0_n22.21.1_b1.3.14` or `v1.0.0_n26.3.1_b1.3.14`).
+corresponding tag (e.g. `v1.0.1_n22.21.1_b1.3.14` or `v1.0.1_n26.3.1_b1.3.14`).
 
 See [VERSIONING.md](./VERSIONING.md) for the tag-naming policy and
 how to add a new matrix.
@@ -50,8 +50,8 @@ v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 
 Examples:
 
-- `v1.0.0_n26.3.1_b1.3.14`
-- `v1.0.0_n28.0.0_b1.5.0`
+- `v1.0.1_n26.3.1_b1.3.14`
+- `v1.0.1_n28.0.0_b1.5.0`
 
 Meaning:
 
@@ -67,7 +67,7 @@ For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 Images are published with exact tags only.
 
-- We publish exact tags like `v1.0.0_n26.3.1_b1.3.14`.
+- We publish exact tags like `v1.0.1_n26.3.1_b1.3.14`.
 - We do not publish `latest`.
 - We do not publish `stable`.
 
@@ -118,19 +118,19 @@ That keeps the container runtime deterministic even when Node bundles change.
 # X.Y.Z (correcciones del repo) viene del ARG VERSION del Dockerfile.
 # Lo puedes override por CLI sin editar el Dockerfile:
 docker build \
-    --build-arg VERSION=1.0.0 \
-    -t cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14 \
+    --build-arg VERSION=1.0.1 \
+    -t cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
     -f ./Dockerfile ./
 ```
 
-`docker inspect cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14 | grep VERSION`
-muestra `VERSION=1.0.0` como fuente de verdad de las correcciones
+`docker inspect cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 | grep VERSION`
+muestra `VERSION=1.0.1` como fuente de verdad de las correcciones
 del repo aplicadas a esa imagen.
 
 ### Verify the runtime matrix locally
 
 ```bash
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14 \
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
     -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
         && node --version && npm --version && bun --version && fnm --version'
 ```
@@ -145,19 +145,19 @@ Expected output:
 ### Start an interactive container
 
 ```bash
-docker run --rm -it cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14
+docker run --rm -it cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
 ```
 
 ### Run the image as a non-root user
 
 ```bash
-docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14
+docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
 ```
 
 ### Use it as a base image
 
 ```dockerfile
-FROM cartagodocker/nodebun:v1.0.0_n26.3.1_b1.3.14
+FROM cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
 
 RUN eval $(fnm env) \
         && fnm use ${NODE_DEFAULT_VERSION} \
@@ -198,9 +198,9 @@ probar en local antes:
 # (debe coincidir con ARG VERSION del Dockerfile) y la matriz por
 # la rama activa. El tag final sigue el formato v{X.Y.Z}_n..._b...
 #
-# Ejemplo: v1.0.0 (correcciones) + n26.3.1_b1.3.14 (matriz).
-PLACEHOLDER_TAG=v1.0.0_n26.3.1_b1.3.14
-VERSION=1.0.0
+# Ejemplo: v1.0.1 (correcciones) + n26.3.1_b1.3.14 (matriz).
+PLACEHOLDER_TAG=v1.0.1_n26.3.1_b1.3.14
+VERSION=1.0.1
 
 # 1. Build con --build-arg VERSION para que la imagen lo exponga
 docker build \

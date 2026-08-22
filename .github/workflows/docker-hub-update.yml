@@ -78,8 +78,8 @@ jobs:
         run: |
           # Parsear el tag para extraer X.Y.Z (el primer segmento
           # antes del primer '_'). Formato esperado (esquema 3):
-          #   v1.0.0_n22.21.1_b1.3.14
-          #   v1.0.0_n26.3.1_b1.3.14
+          #   v1.0.1_n22.21.1_b1.3.14
+          #   v1.0.1_n26.3.1_b1.3.14
           # VERSION es el contador semver ligero de correcciones
           # del repo. Se inyecta como --build-arg para que el
           # Dockerfile lo vea y lo exponga como ENV VERSION.

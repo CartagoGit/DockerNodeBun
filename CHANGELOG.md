@@ -13,11 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Dockerfile, wrapper, workflows, docs), separado de la **matriz de
   runtime** `n..._b...`. Esto permite saber si dos imágenes comparten
   correcciones solo mirando el tag, sin importar la matriz.
-- **`ARG VERSION=1.0.0` added to Dockerfile** as single source of truth
+- **`ARG VERSION=1.0.1` added to Dockerfile** as single source of truth
   para `X.Y.Z`. Se inyecta como `--build-arg VERSION=X.Y.Z` desde
   `.github/workflows/docker-hub-update.yml` (que parsea el tag con
   bash regex), y se exporta como `ENV VERSION=${VERSION}` para que
   `docker inspect` muestre la versión de correcciones aplicada.
+  Valor inicial elegido en `1.0.1` (saltándose `1.0.0`) para evitar
+  colisión visual con los tags legacy `v1_*` del esquema 2.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
