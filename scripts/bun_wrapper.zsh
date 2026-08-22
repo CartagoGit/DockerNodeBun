@@ -32,6 +32,16 @@ bun_original_exit=$?
 
 # Only root/sudoers get to relax permissions on the share folder.
 if [[ "$IS_ROOT_PRIV" == true ]]; then
+    # Install-class subcommand check. The subcommand must be the FIRST
+    # argument to count (bun's positional CLI is subcommand-first).
+    # Detecting 'i'/'install'/'add'/'a' as INSTALL anywhere in args
+    # causes false positives with `bun run i` or `bun add -g some-pkg i`
+    # where 'i' is just a script name / package name.
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            i|install|a|add) INSTALL=true ;;
+        esac
+    fi
     for arg in "$@"; do
         # Split on '=' first so '--global=true' is treated as the long
         # flag, not as a flag whose value happens to be '=true'.
@@ -42,11 +52,6 @@ if [[ "$IS_ROOT_PRIV" == true ]]; then
            [[ "$flag_part" == "--global" ]] || \
            [[ "$flag_part" == -* && "$flag_part" != --* && "$flag_part" == *[gG]* ]]; then
             GLOBAL=true
-        fi
-        # Install-class subcommand: install, i, add, a (bun aliases).
-        if [[ "$arg" == "i" ]] || [[ "$arg" == "install" ]] || \
-           [[ "$arg" == "a" ]] || [[ "$arg" == "add" ]]; then
-            INSTALL=true
         fi
     done
 

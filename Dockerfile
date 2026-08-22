@@ -42,12 +42,16 @@ ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-
 
 COPY ./scripts ${BIN_HOME}
 
+# Bloque ENV multilínea. Los comentarios van FUERA del bloque (antes
+# de ENV) para máxima portabilidad de parsers Docker: las líneas
+# dentro de un bloque de continuación con `\` que empiecen por `#`
+# pueden ser ignoradas por parsers viejos, dejando el bloque roto.
+# VERSION es single source of truth para el contador de correcciones
+# del repo (esquema v{X.Y.Z}). Se inyecta via --build-arg VERSION=X.Y.Z
+# desde el workflow. Tambien expuesto en ENV para que 'docker inspect'
+# lo muestre sin parsear tags.
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=${BUN_BIN}:${FNM_BIN}:${PATH} \
-    # Single source of truth para el contador de correcciones del repo
-    # (esquema v{X.Y.Z}). Se inyecta via --build-arg VERSION=X.Y.Z en
-    # el workflow. Tambien expuesto en ENV para que 'docker inspect'
-    # lo muestre sin parsear tags.
     VERSION=${VERSION} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
     FNM_BIN=${FNM_BIN} \

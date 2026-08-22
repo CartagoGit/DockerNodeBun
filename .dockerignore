@@ -18,10 +18,13 @@ LICENSE
 # CI de GitHub (workflows corre en GH Actions, no dentro de la imagen)
 .github
 
-# El directorio scripts/ se copia entero, pero excluimos backups
-# y archivos de OS dentro de el.
+# El directorio scripts/ se copia entero, pero excluimos backups,
+# archivos de OS y scripts del mantenedor (no del runtime) dentro de el.
 scripts/.DS_Store
 scripts/*.swp
+# tag-breakpoint.sh es solo del mantenedor (para crear tags
+# breakpoint_vX.Y.Z), no se ejecuta dentro del contenedor.
+scripts/tag-breakpoint.sh
 
 # Logs / temp
 *.log
