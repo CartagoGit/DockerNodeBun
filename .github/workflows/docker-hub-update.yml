@@ -5,12 +5,23 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to build and push (e.g. v6_n22.21.1_b1.3.14)'
+        required: true
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      IMAGE_TAG: '${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:${GITHUB_REF#refs/tags/}'
+    # NOTA: IMAGE_TAG NO se declara aqui en el env: del job. La razón
+    # es que este workflow se dispara de dos formas:
+    #   1. push de tag v* -> GITHUB_REF = refs/tags/<tag>
+    #   2. workflow_dispatch manual -> GITHUB_REF = refs/heads/main
+    # En el caso 2, el valor del env: del job seria literalmente
+    # 'cartagodocker/nodebun:refs/heads/main', un tag invalido.
+    # Por eso IMAGE_TAG se computa en el step 'Resolve tag name' y
+    # se exporta a GITHUB_ENV alli.
 
     steps:
       - name: Checkout repository
@@ -27,9 +38,23 @@ jobs:
 
       - name: Resolve tag name
         run: |
-          VERSION_TAG=${GITHUB_REF#refs/tags/}
+          # Soporta dos disparadores:
+          #   1. push de tag v*: GITHUB_REF = 'refs/tags/<tag>'
+          #   2. workflow_dispatch: tag viene del input 'tag_name'
+          set -euo pipefail
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            # workflow_dispatch: el input se valida que exista
+            VERSION_TAG="${{ inputs.tag_name }}"
+            if [[ -z "$VERSION_TAG" ]]; then
+              echo "Error: tag_name input is required for workflow_dispatch" >&2
+              exit 1
+            fi
+          fi
           echo "VERSION_TAG=$VERSION_TAG" >> "$GITHUB_ENV"
           echo "IMAGE_TAG=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:$VERSION_TAG" >> "$GITHUB_ENV"
+          echo "Resolved IMAGE_TAG=$IMAGE_TAG"
 
       - name: Check if the tag already exists on Docker Hub
         id: check

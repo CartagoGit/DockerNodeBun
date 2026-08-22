@@ -92,3 +92,17 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
     )"
+
+# Nota: no cambiamos a USER 1000:1000 al final. Razon:
+#   - 'add_text_to_zshrc' escribe al HOME del usuario activo (root
+#     durante este RUN), o sea /root/.zshrc. Si cambiaramos a USER
+#     1000:1000 despues, los consumidores que ejecuten como ese
+#     usuario (lx-app compose usa 'user: 1000:1000') tendrian
+#     .zshrc vacio.
+#   - lx-app y otros consumidores hacen 'user: 1000:1000' en compose,
+#     que sobreescribe el USER del Dockerfile. Mantener root aqui
+#     es seguro y compatible.
+#   - Para defense-in-depth, los paths chmod 777 (BUN_HOME, FNM_HOME)
+#     son escribibles por 1000. No hay razon para un usuario no-root
+#     como default del Dockerfile hasta que se reescriba el .zshrc
+#     para el HOME correcto.
