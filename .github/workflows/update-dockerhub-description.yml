@@ -34,10 +34,21 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO }}
         run: |
+          # Construir el JSON en un archivo temporal para evitar problemas
+          # de escape con caracteres especiales del README (backticks,
+          # backslashes, acentos, comillas dobles, etc.). El viejo
+          # 'jq -Rs . < README.md' embebido en -d funcionaba pero era
+          # fragil ante cambios en jq o en el contenido del README.
+          jq -n --rawfile description README.md '{full_description: $description}' \
+            > /tmp/dockerhub-desc-payload.json
+
+          # Validar que el payload es JSON valido antes de enviarlo.
+          jq . /tmp/dockerhub-desc-payload.json > /dev/null
+
           response=$(curl -fsSL -X PATCH "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/" \
             -H "Authorization: JWT ${DOCKERHUB_JWT}" \
             -H "Content-Type: application/json" \
-            -d "{\"full_description\": $(jq -Rs . < README.md)}" \
+            --data-binary @/tmp/dockerhub-desc-payload.json \
             -w "\n%{http_code}")
           status_code=$(echo "$response" | tail -n 1)
           body=$(echo "$response" | sed '$d')
