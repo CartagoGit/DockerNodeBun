@@ -18,7 +18,7 @@ build runner.
 
 ## Base image
 
-- Base image: `cartagodocker/zsh:v1.0.2` (pinned for reproducibility)
+- Base image: `cartagodocker/zsh:v1.0.5` (pinned for reproducibility)
 - OS family: Ubuntu 24.04
 - The zsh image provides `zsh`. Our `Dockerfile` adds `sudo`,
   `ca-certificates`, bun, fnm, node, and npm on top.
@@ -81,40 +81,105 @@ That is intentional. Consumers must pin the exact runtime matrix they require.
 
 ## Environment variables exposed by the image
 
-- `NODE_DEFAULT_VERSION=26.3.1`
+- `NODE_DEFAULT_VERSION` — matrix Node (e.g. `22.21.1` / `26.3.1`)
 - `FNM_HOME=/usr/share/fnm`
+- `FNM_DIR=/usr/share/fnm/store`
+- `FNM_BIN=/usr/share/fnm/bin`
 - `BUN_HOME=/usr/share/bun`
 - `BUN_INSTALL=/usr/share/bun`
+- `IS_INTO_CONTAINER=true`
+
+Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh`
+re-exports the same variables. The bun wrapper also falls back to
+`BUN_HOME=/usr/share/bun` if the env is empty.
 
 ## How the image works
 
-### Node activation
+### Node, npm, bun, fnm — baked at build, not at start
 
-Node is installed through `fnm` and activated with:
+The matrix (`node` / `bun` / `fnm` / `npm` from `.github/matrices.yml`) is
+**installed during `docker build`**. `docker run` / `docker exec` do not
+download anything.
+
+| Tool | Installed at build | Activated at start |
+|---|---|---|
+| Node | `fnm install ${NODE_DEFAULT_VERSION}` into `FNM_DIR` | `/usr/local/bin/node` (any shell). zsh also `eval "$(fnm env --shell zsh)"` + `fnm use ${NODE_DEFAULT_VERSION}` |
+| npm | `npm install -g npm@${NPM_VERSION}` on that Node | `/usr/local/bin/npm` |
+| bun | AVX2 + baseline zips into `/usr/share/bun` | `/usr/local/bin/bun` (wrapper) |
+| fnm | release binary into `/usr/share/fnm/bin` | `/usr/local/bin/fnm`; zsh loads `fnm env` |
+
+`fnm default` + `fnm env` follow the [official fnm shell setup](https://github.com/Schniz/fnm#shell-setup).
+`fnm env` must run **per shell** (it dies with the process). The Dockerfile
+`eval` during `RUN` only exists so `npm i -g` works at build time.
+
+### Any uid, any shell, new users
+
+- Store: `FNM_DIR=/usr/share/fnm/store` (`777`, same as bun). Any uid can
+  `fnm install` / `fnm use`.
+- Homes + `/etc/skel`: `~/.local/share/fnm` → that store. `useradd -m`
+  inherits it.
+- `sudo` **without a password by default** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`).
+  Compose `user: 1000:1000` drops supplementary groups, so `%sudo` is
+  not enough. Optional password is **not** baked into the image.
+- PATH fallback: `/usr/local/bin/{node,npm,npx,fnm,bun}` so `sh`/`bash`
+  without `.zshrc` still work (CI, compose `command:`, `docker exec -u 1000`).
+- Switching versions is opt-in **for that session**:
 
 ```bash
-eval $(fnm env)
-fnm use ${NODE_DEFAULT_VERSION}
+fnm install 20.19.0
+fnm use 20.19.0   # this shell only; a new shell is back on the matrix
 ```
 
-This must be done in any Docker `RUN` step where `node` or `npm` is needed,
-because `fnm` wires them into `PATH` at shell runtime.
+### POSIX helpers (zsh is the default shell)
+
+From an interactive zsh, run a bash/sh snippet that is not zsh-safe:
+
+```bash
+in-bash                         # interactive bash with login env
+in-bash -c 'set -o pipefail; …' # bash-only
+in-sh -c 'case $1 in … esac'    # POSIX sh
+```
+
+Skip (or require) a command depending on whether we are inside the
+container (`/.dockerenv` or `IS_INTO_CONTAINER=true`):
+
+```bash
+skip-if-container adb start-server   # no-op inside; runs on the host
+only-in-container bun run test       # only inside
+only-in-container && echo in-docker  # predicate, exit 0/1
+```
+
+### sudo
+
+Passwordless by default for **every** uid (including compose
+`user: 1000:1000`). `node`/`npm`/`bun` do not need it. The boundary is
+whether you type `sudo`. Optional password is runtime-only.
+
+Opt-in password **at start** (not in the image):
+
+```bash
+docker run --rm -it -e SUDO_PASSWORD=secret cartagodocker/nodebun:v2.0.0_n22.21.1_b1.3.14
+```
+
+Or **inside** the container:
+
+```bash
+sudo -n id                 # default: no password
+sudo-password              # prompt; afterwards sudo asks for it
+sudo-password 'secret'     # same, from arg (visible in ps)
+sudo sudo-nopasswd         # back to NOPASSWD (needs the password)
+```
 
 ### Bun runtime
 
-Bun is installed in `/usr/share/bun`.
-
-The image ships two Bun binaries:
-
-- an AVX2-optimized x64 binary
-- a baseline x64 binary
-
-The wrapper selects the correct one at runtime depending on CPU capabilities.
+Bun lives in `/usr/share/bun`. Two binaries (AVX2 + baseline); the wrapper
+picks one from `/proc/cpuinfo`. Global installs (`bun add -g`) chmod 777
+the share folder when run as root/sudoer.
 
 ### npm
 
-`npm` is pinned explicitly after the selected Node runtime is activated.
-That keeps the container runtime deterministic even when Node bundles change.
+`npm` is pinned after the matrix Node is activated, so the container
+runtime stays deterministic even when Node's bundled npm changes.
 
 ## Typical usage
 
@@ -137,8 +202,9 @@ del repo aplicadas a esa imagen.
 
 ```bash
 docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
-    -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
-        && node --version && npm --version && bun --version && fnm --version'
+    -lc 'node --version && npm --version && bun --version && fnm --version'
+docker run --rm --user 1000:1000 --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
+    -lc 'node --version && npm --version && bun --version && fnm list'
 ```
 
 Expected output:
@@ -165,9 +231,7 @@ docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.1
 ```dockerfile
 FROM cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 
-RUN eval $(fnm env) \
-        && fnm use ${NODE_DEFAULT_VERSION} \
-        && node --version \
+RUN node --version \
         && npm --version \
         && bun --version
 ```
@@ -258,10 +322,11 @@ docker build \
     -t cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
     -f ./Dockerfile ./
 
-# Verify the four runtimes are wired correctly
+# Verify the four runtimes are wired correctly (no fnm activation needed)
 docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
-    -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
-        && node --version && npm --version && bun --version && fnm --version'
+    -lc 'node --version && npm --version && bun --version && fnm --version'
+docker run --rm --user 1000:1000 --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
+    -lc 'node --version && npm --version && bun --version && fnm list'
 ```
 
 ## Versioning

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-23
+
+### Added
+- **`in-bash` / `in-sh`**: helpers en `/usr/local/bin` para lanzar
+  bash o POSIX sh (con login env) desde zsh cuando un snippet no es
+  zsh-safe (`set -o pipefail`, `[[ ]]`, `case` POSIX, etc.).
+- **`skip-if-container` / `only-in-container`**: predicados para no
+  correr (o solo correr) un comando si estamos dentro de nodebun.
+  Detectan `/.dockerenv` o `IS_INTO_CONTAINER=true`.
+- **`/etc/profile.d/nodebun.sh`**: re-exporta `BUN_HOME` / `FNM_DIR`
+  en shells login (`su -`, `bash -l`). Docker ENV no llega a `su -`.
+- **`sudo` NOPASSWD por defecto** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`).
+  Compose `user: 1000:1000` no carga grupos suplementarios (`sudo`);
+  la regla tiene que ser ALL, no `%sudo`. El limite es no escribir
+  `sudo` si no hace falta.
+- **Contraseña de sudo opt-in en runtime** (no se hornea en la imagen):
+  - al levantar: `docker run -e SUDO_PASSWORD=secret …`
+  - dentro: `sudo-password` (prompt o arg) / `sudo-nopasswd` para volver.
+
+### Fixed
+- **Node visible para cualquier uid**. `v2.0.0` instalaba Node en
+  `/root/.local/share/fnm` y el `.zshrc` global hacia
+  `eval $(fnm env); fnm use ${NODE_DEFAULT_VERSION}`. Compose con
+  `user: 1000:1000` (lx-app) arrancaba zsh interactivo y fnm pedia
+  instalar 22.21.1 porque el store de ubuntu estaba vacio.
+  Contrato (sigue `2.0.0`, se republica el tag):
+  - `FNM_DIR=/usr/share/fnm/store` (store global, no per-home).
+  - `node`/`npm`/`npx`/`fnm`/`bun` en `/usr/local/bin`.
+  - Store `777` (como bun): cualquier uid puede `fnm install` / `fnm use`.
+  - Symlink `~/.local/share/fnm` + `/etc/skel` para usuarios nuevos.
+  - `.zshrc`: `fnm env --shell zsh` + `fnm use ${NODE_DEFAULT_VERSION}`
+    (version del tag, ya instalada). Sin `--install-if-missing`.
+  - `SHELL ["/bin/sh", "-c"]` en el Dockerfile: la base zsh usaba
+    `SHELL ["zsh", "-c"]` y el RUN de instalacion se cortaba en
+    `fnm env --use-on-cd=false` (fnm 1.38.1 no acepta valor). Docker
+    marcaba el layer OK y la imagen salia sin node/bun en PATH.
+  - Wrapper de bun: fallback `BUN_HOME=/usr/share/bun` para `su -`.
+
 ### Changed
 - **Tag scheme migrated to `v{X.Y.Z}_n..._b...`** (esquema 3, vigente desde
   2026-08-22). `X.Y.Z` es un semver ligero de las **correcciones del repo**

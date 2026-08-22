@@ -1,0 +1,11 @@
+#!/bin/sh
+# No-op inside the nodebun/docker container; run the command on the host.
+# Usage: skip-if-container adb start-server
+if [ -f /.dockerenv ] || [ "${IS_INTO_CONTAINER:-}" = "true" ]; then
+  exit 0
+fi
+if [ $# -eq 0 ]; then
+  echo "skip-if-container: missing command" >&2
+  exit 2
+fi
+exec "$@"

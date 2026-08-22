@@ -1,0 +1,10 @@
+#!/bin/sh
+# Run POSIX sh with login env (profile.d/nodebun.sh) from zsh or any shell.
+# Usage:
+#   in-sh
+#   in-sh -c 'case $1 in … esac'
+#   in-sh script.sh
+if [ $# -eq 0 ]; then
+  exec /bin/sh -l
+fi
+exec /bin/sh -l "$@"

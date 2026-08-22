@@ -21,13 +21,14 @@ INSTALL=false
 IS_ROOT_PRIV=false
 if [[ $(id -u) -eq 0 ]]; then
     IS_ROOT_PRIV=true
-elif command -v sudo &>/dev/null && sudo -v &>/dev/null; then
+elif command -v sudo &>/dev/null && sudo -n true &>/dev/null; then
     IS_ROOT_PRIV=true
 fi
 
 echo "Running bun_wrapper.sh script with parameters: $@" >&2
 
-$BUN_HOME/bin/bun_original "$@"
+BUN_HOME="${BUN_HOME:-/usr/share/bun}"
+"$BUN_HOME/bin/bun_original" "$@"
 bun_original_exit=$?
 
 # Only root/sudoers get to relax permissions on the share folder.

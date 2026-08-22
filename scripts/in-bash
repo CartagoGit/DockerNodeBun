@@ -1,0 +1,10 @@
+#!/bin/sh
+# Run bash with login env (profile.d/nodebun.sh) from zsh or any shell.
+# Usage:
+#   in-bash                 # interactive bash
+#   in-bash -c 'set -o pipefail; …'   # bash-only snippet
+#   in-bash script.sh
+if [ $# -eq 0 ]; then
+  exec /bin/bash --login
+fi
+exec /bin/bash --login "$@"

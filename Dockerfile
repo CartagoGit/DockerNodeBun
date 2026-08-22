@@ -6,6 +6,11 @@
 # ca-certificates, fnm, node, bun y npm.
 FROM cartagodocker/zsh:v1.0.5
 USER root
+# La imagen zsh define SHELL ["zsh", "-c"]. Un RUN largo con quotes,
+# $(...) y && se parte o se traga errores (fnm env invalido -> eval vacio
+# -> el resto no corre y Docker igual marca el layer OK). Los RUN de
+# instalacion van en POSIX sh.
+SHELL ["/bin/sh", "-c"]
 
 # Versions
 # Tagging scheme: v{X.Y.Z}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
@@ -32,6 +37,13 @@ ARG BIN_HOME=/usr/local/bin
 
 ARG BUN_HOME=${SHARE_HOME}/bun
 ARG FNM_HOME=${SHARE_HOME}/fnm
+# Store de versiones Node (no el binario). Vive junto a FNM_HOME para
+# que todos los uid vean las mismas instalaciones. 777 a proposito:
+# cualquier usuario del contenedor puede `fnm install` / `fnm use`
+# (mismo contrato que BUN_HOME). El default de la imagen no depende
+# de eso: node/npm/npx estan en /usr/local/bin.
+ARG FNM_DIR=${FNM_HOME}/store
+ARG NODE_BIN=${BIN_HOME}
 
 ARG FNM_BIN=${FNM_HOME}/bin
 ARG BUN_BIN=${BUN_HOME}/bin
@@ -41,6 +53,8 @@ ARG BUN_DOWNLOAD_URL_BASELINE=https://github.com/oven-sh/bun/releases/download/b
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
 
 COPY ./scripts ${BIN_HOME}
+# in-bash / in-sh / skip-if-container / only-in-container / bun_wrapper
+# se copian a /usr/local/bin. El profile de login va a /etc/profile.d.
 
 # Bloque ENV multilínea. Los comentarios van FUERA del bloque (antes
 # de ENV) para máxima portabilidad de parsers Docker: las líneas
@@ -51,84 +65,85 @@ COPY ./scripts ${BIN_HOME}
 # desde el workflow. Tambien expuesto en ENV para que 'docker inspect'
 # lo muestre sin parsear tags.
 ENV DEBIAN_FRONTEND=noninteractive \
-    PATH=${BUN_BIN}:${FNM_BIN}:${PATH} \
+    PATH=${NODE_BIN}:${BUN_BIN}:${FNM_BIN}:${PATH} \
     VERSION=${VERSION} \
     NODE_DEFAULT_VERSION=${NODE_DEFAULT_VERSION} \
     FNM_BIN=${FNM_BIN} \
+    FNM_DIR=${FNM_DIR} \
+    FNM_HOME=${FNM_HOME} \
     BUN_HOME=${BUN_HOME} \
-    BUN_INSTALL=${BUN_HOME}
+    BUN_INSTALL=${BUN_HOME} \
+    IS_INTO_CONTAINER=true
 
+# Comentarios FUERA del bloque RUN (un `#` a mitad de `\` trunca el
+# instruction en parsers Docker/BuildKit). Contrato:
+#   1. FNM_DIR global -> fnm install no escribe en /root/.local.
+#   2. node/npm/npx en /usr/local/bin -> cualquier uid/shell, sin fnm use.
+#   3. symlink ~/.local/share/fnm + /etc/skel -> usuarios nuevos.
+#   4. store 777 (como bun): cualquier uid puede instalar/cambiar Node.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip ca-certificates libatomic1 sudo \
-    # Install fnm
+    && chmod +x ${BIN_HOME}/enable-sudo-users.sh \
+    && ${BIN_HOME}/enable-sudo-users.sh \
     && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
-    && mkdir -p ${FNM_BIN} \
+    && mkdir -p ${FNM_BIN} ${FNM_DIR} \
     && unzip /tmp/fnm.zip -d ${FNM_BIN} \
     && chmod +x ${FNM_BIN}/fnm \
     && fnm completions --shell zsh > ${FNM_BIN}/_fnm \
     && fnm install ${NODE_DEFAULT_VERSION} \
     && fnm default ${NODE_DEFAULT_VERSION} \
-    && eval $(fnm env) \
+    && eval "$(fnm env --shell bash)" \
+    && fnm use ${NODE_DEFAULT_VERSION} \
     && npm install -g npm@${NPM_VERSION} \
     && node --version \
     && npm --version \
-    # Install both bun versions (AVX2 optimized and baseline)
+    && NODE_INSTALLATION="${FNM_DIR}/node-versions/v${NODE_DEFAULT_VERSION}/installation" \
+    && test -x "${NODE_INSTALLATION}/bin/node" \
+    && ln -sfn "${NODE_INSTALLATION}/bin/node" ${NODE_BIN}/node \
+    && ln -sfn "${NODE_INSTALLATION}/bin/npm"  ${NODE_BIN}/npm \
+    && ln -sfn "${NODE_INSTALLATION}/bin/npx"  ${NODE_BIN}/npx \
+    && if [ -x "${NODE_INSTALLATION}/bin/corepack" ]; then ln -sfn "${NODE_INSTALLATION}/bin/corepack" ${NODE_BIN}/corepack; fi \
+    && ln -sfn ${FNM_BIN}/fnm ${NODE_BIN}/fnm \
+    && chmod -R 777 ${FNM_HOME} \
+    && for dir in /home/* /root /etc/skel; do if [ -d "$dir" ]; then mkdir -p "$dir/.local/share"; rm -rf "$dir/.local/share/fnm"; ln -sfn "${FNM_DIR}" "$dir/.local/share/fnm"; fi; done \
     && mkdir -p ${BUN_HOME}/bin \
-    # Download AVX2 version
     && curl -fsSL ${BUN_DOWNLOAD_URL_AVX2} -o /tmp/bun-avx2.zip \
     && unzip /tmp/bun-avx2.zip -d /tmp/bun-avx2 \
     && mv /tmp/bun-avx2/bun-linux-*/bun ${BUN_BIN}/bun_avx2 \
     && chmod +x ${BUN_BIN}/bun_avx2 \
-    # Download baseline version
     && curl -fsSL ${BUN_DOWNLOAD_URL_BASELINE} -o /tmp/bun-baseline.zip \
     && unzip /tmp/bun-baseline.zip -d /tmp/bun-baseline \
     && mv /tmp/bun-baseline/bun-linux-*-baseline/bun ${BUN_BIN}/bun_baseline \
     && chmod +x ${BUN_BIN}/bun_baseline \
-    # Create smart wrapper that detects CPU capabilities
-    && echo '#!/bin/sh' > ${BUN_BIN}/bun_original \
-    && echo 'if grep -q "avx2" /proc/cpuinfo 2>/dev/null; then' >> ${BUN_BIN}/bun_original \
-    && echo '  exec '"${BUN_BIN}"'/bun_avx2 "$@"' >> ${BUN_BIN}/bun_original \
-    && echo 'else' >> ${BUN_BIN}/bun_original \
-    && echo '  exec '"${BUN_BIN}"'/bun_baseline "$@"' >> ${BUN_BIN}/bun_original \
-    && echo 'fi' >> ${BUN_BIN}/bun_original \
+    && printf '%s\n' '#!/bin/sh' 'if grep -q "avx2" /proc/cpuinfo 2>/dev/null; then' "  exec ${BUN_BIN}/bun_avx2 \"\$@\"" 'else' "  exec ${BUN_BIN}/bun_baseline \"\$@\"" 'fi' > ${BUN_BIN}/bun_original \
     && chmod +x ${BUN_BIN}/bun_original \
-    # Create final wrapper for bun to manage permissions and call the smart selector
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
-    # Set permissions to 777 for compatibility with CI runners (like v.1.0.7)
+    && ln -sfn ${BUN_BIN}/bun ${NODE_BIN}/bun \
+    && chmod +x ${BIN_HOME}/in-bash ${BIN_HOME}/in-sh ${BIN_HOME}/skip-if-container ${BIN_HOME}/only-in-container \
+    && chmod +x ${BIN_HOME}/sudo-password ${BIN_HOME}/sudo-nopasswd ${BIN_HOME}/apply-sudo-password-on-boot.sh ${BIN_HOME}/enable-sudo-users.sh \
+    && install -m 0644 ${BIN_HOME}/nodebun-profile.sh /etc/profile.d/nodebun.sh \
+    && if [ -f /etc/bash.bashrc ]; then printf '\n# nodebun login/non-login bash\n. /etc/profile.d/nodebun.sh\n' >> /etc/bash.bashrc; fi \
     && chmod -R 777 ${BUN_HOME} \
-    # Sanity check: bun must run. Use `|| true` so a transient bun failure
-    # here does not abort the whole image build. The wrapper itself was
-    # already created and chmodded above; this only confirms it's wired up.
     && bun --version || echo "[warn] bun --version failed during image build" \
-    # Clean run
     && apt-get clean \
     && (rm -rf /var/lib/apt/lists/* /tmp/* || true)
 
-# Add to .zshrc the configuration for fnm and bun.
-# Usamos el helper `add_text_to_zshrc` del base image
-# cartagodocker/zsh:v1.0.2 (codigo en https://github.com/CartagoGit/DockerZsh).
-# Es parte del contrato del base image y maneja correctamente la
-# creacion del HOME del usuario activo (root en este RUN) y la
-# idempotencia (no duplica bloques si se rebuilda).
+# zshrc: setup oficial de fnm (https://github.com/Schniz/fnm#shell-setup).
+# `fnm env` por sesion; `fnm default` ya apunta a la matriz, asi que
+# el eval activa esa version. `fnm use` explicito por si acaso.
+# Sin --use-on-cd: un .nvmrc del repo montado no debe saltar de matriz.
+# Sin --use-on-cd=false: fnm 1.38.1 no acepta valor (rompe el eval).
+# sh/bash no-interactivo usa /usr/local/bin/node (mismo default).
 RUN add_text_to_zshrc "$(printf '%s\n' \
-    '# Autocomplete for fnm' \
+    '# Autocomplete + official fnm shell setup (matrix Node is the default)' \
     'fpath=(${FNM_BIN} $fpath)' \
-    'eval $(fnm env)' \
+    'eval "$(fnm env --shell zsh)"' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
+    '[ -x /usr/local/bin/apply-sudo-password-on-boot.sh ] && /usr/local/bin/apply-sudo-password-on-boot.sh || true' \
     )"
 
-# Nota: no cambiamos a USER 1000:1000 al final. Razon:
-#   - El bloque anterior escribe al HOME del usuario activo (root
-#     durante este RUN), o sea /root/.zshrc. Si cambiaramos a USER
-#     1000:1000 despues, los consumidores que ejecuten como ese
-#     usuario (lx-app compose usa 'user: 1000:1000') tendrian
-#     .zshrc vacio.
-#   - lx-app y otros consumidores hacen 'user: 1000:1000' en compose,
-#     que sobreescribe el USER del Dockerfile. Mantener root aqui
-#     es seguro y compatible.
-#   - Para defense-in-depth, los paths chmod 777 (BUN_HOME, FNM_HOME)
-#     son escribibles por 1000. No hay razon para un usuario no-root
-#     como default del Dockerfile hasta que se reescriba el .zshrc
-#     para el HOME correcto.
+# USER del Dockerfile se queda en root. Consumidores no-root
+# (lx-app compose: user: 1000:1000) lo pisan. Node/fnm no
+# dependen del HOME: FNM_DIR es global y node esta en /usr/local/bin.

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Run the command only inside the nodebun/docker container.
+# No args: exit 0 if inside, 1 if not (usable as a predicate).
+# Usage: only-in-container bun run test
+inside=false
+if [ -f /.dockerenv ] || [ "${IS_INTO_CONTAINER:-}" = "true" ]; then
+  inside=true
+fi
+if [ "$inside" = true ]; then
+  [ $# -eq 0 ] && exit 0
+  exec "$@"
+fi
+if [ $# -eq 0 ]; then
+  exit 1
+fi
+echo "only-in-container: not inside the nodebun container" >&2
+exit 1
