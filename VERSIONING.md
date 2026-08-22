@@ -109,56 +109,8 @@ Cada vez que se publique un tag nuevo, se hace en este orden:
 3. **Actualizar `README.md`** (tabla de versiones) y este `VERSIONING.md`
    si la política cambia.
 
----
-
-## Política de `latest` y `stable`
-
-A partir de **2026-08-22** se publica también el tag flotante `latest`,
-que apunta siempre al **último digest publicado de la matriz
-`v*_n26.3.1_b1.3.14`** (es decir, al `v{N}` más alto para node 26.3.1 +
-bun 1.3.14). En este momento eso es `v2_n26.3.1_b1.3.14`.
-
-### Reglas
-
-1. **`latest` se actualiza en cada publicación** de la matriz canónica
-   actual (en este momento `n26.3.1_b1.3.14`). Si en el futuro se
-   publica una nueva matriz (por ejemplo `n28.0.0_b1.5.0`), `latest`
-   pasa a apuntar a esa nueva matriz en su primera publicación.
-2. **Los consumidores que quieran builds reproducibles** deben fijar un
-   tag exacto (`v1_n22.21.1_b1.3.14`, `v2_n26.3.1_b1.3.14`, etc.). El
-   `latest` **no garantiza** que dos pulls consecutivos devuelvan el
-   mismo digest.
-3. **No se publica `stable`** (reservado para futuro; mismo tratamiento
-   que `latest` cuando se introduzca).
-4. **`latest` nunca se construye como un build independiente.** Siempre
-   es un alias (`docker tag`) de un tag pinneable. Esto garantiza que
-   el digest de `latest` siempre coincide con el digest de algún tag
-   `v{N}_n..._b...` que ya pasó por el proceso de release completo.
-5. **El proceso de actualización** es siempre:
-   ```bash
-   docker build -t cartagodocker/nodebun:<TAG_PINNED> -f ./Dockerfile .
-   docker push cartagodocker/nodebun:<TAG_PINNED>
-   docker tag cartagodocker/nodebun:<TAG_PINNED> cartagodocker/nodebun:latest
-   docker push cartagodocker/nodebun:latest
-   ```
-   Es decir, `latest` siempre se construye como un **alias** de un tag
-   pinneable, no como un build independiente.
-
-### Por qué se introduce `latest`
-
-Antes de 2026-08-22, este repo seguía la política "no `latest`, solo
-tags pinneables" (registrada en la tabla de historial de decisiones).
-Se relaja esa política por dos razones operativas:
-
-- **Desarrollo local**: muchos devs hacen `docker run --rm
-  cartagodocker/nodebun:latest bash` para iterar sin tener que
-  actualizar manualmente el tag.
-- **Consumidores no-CI**: scripts de tooling, smoke tests y otros usos
-  puntuales que no necesitan reproducibilidad exacta sino "lo último
-  estable".
-
-Los consumidores críticos (CI de builds reproducibles,
-`logistics-app`, etc.) **siguen obligados** a fijar su tag.
+> No se publica **nunca** `latest` ni `stable` desde este repo: cada
+> consumidor debe fijar su tag exacto para tener builds reproducibles.
 
 ---
 
@@ -191,7 +143,7 @@ slice **S3**.
 | `v.1.1.2` (semver) | `v1_n22.12.0_b1.1.42` (canon nuevo) | Self-describing, no opaco |
 | `v` con tres niveles | `v{N}` con un dígito | Contador, no semver |
 | `Bun.js 1.1.42` en README | `v1_n..._b1.1.42` en tag | Fuente de verdad única |
-| Imágenes con `latest` (opcional, alias) | Imágenes con matriz exacta | Builds reproducibles siguen requiriendo tags pinneables |
+| Imágenes con `latest` | Imágenes con matriz exacta | Builds reproducibles |
 
 ---
 
@@ -201,5 +153,4 @@ slice **S3**.
 |---|---|---|
 | 2026-07-17 | Adopción del canon `v{N}_n{node}_b{bun}` (separador `_` por OCI) | `x00065` S2 |
 | 2026-07-17 | Política de no-rewrite de tags legacy | `x00065` |
-| 2026-07-17 | Sin tags `latest`/`stable` (vigente hasta 2026-08-22) | `x00065` |
-| 2026-08-22 | Relajación: se publica `latest` como alias de la matriz canónica actual; los consumidores críticos siguen obligados a fijar tag | Demanda operativa devs/CI |
+| 2026-07-17 | Sin tags `latest`/`stable` | `x00065` |
