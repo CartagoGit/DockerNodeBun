@@ -135,11 +135,22 @@ jobs:
           PLAN_FILE="/tmp/matrix-plan.tsv"
           : > "$PLAN_FILE"
 
-          # Validar el manifesto antes de iterarlo. Falla loud si
-          # falta la clave matrices — antes (con Dockerfile multi-branch)
-          # el error aparecía solo en el build step.
-          yq eval-all 'select(.matrices == null) | error("matrices key missing or empty")' \
-              .github/matrices.yml > /dev/null
+          # Validar el manifiesto antes de iterarlo. Falla loud si
+          # falta la clave matrices o si no hay entradas activas.
+          # Test: el archivo debe parsear como YAML valido y la
+          # clave .matrices debe existir y tener al menos 1 entrada.
+          #
+          # Bug previo: el check era
+          #   yq eval-all 'select(.matrices == null) | error("...")'
+          # pero select sin match retorna vacio, y | error se evalua
+          # con input vacio, fallando SIEMPRE. Reemplazo por un test
+          # directo sobre la longitud del array .matrices.
+          MATRICES_LEN=$(yq eval-all '.matrices | length // 0' .github/matrices.yml | head -n1)
+          if [[ -z "$MATRICES_LEN" || "$MATRICES_LEN" -eq 0 ]]; then
+            echo "Error: .github/matrices.yml has no .matrices array or it is empty." >&2
+            echo "       See VERSIONING.md for the manifesto policy." >&2
+            exit 1
+          fi
 
           # Si MATRIX_NAME viene pre-fijado (caso matrix), filtrar
           # el manifesto a solo esa entrada. Si está vacío (caso
