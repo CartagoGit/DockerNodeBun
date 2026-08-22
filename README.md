@@ -18,19 +18,27 @@ build runner.
 
 ## Base image
 
-- Base image: `cartagodocker/zsh:latest`
+- Base image: `cartagodocker/zsh:v1.0.2` (pinned for reproducibility)
 - OS family: Ubuntu 24.04
+- The zsh image provides `zsh`. Our `Dockerfile` adds `sudo`,
+  `ca-certificates`, bun, fnm, node, and npm on top.
 
 ## Current runtime matrix
 
-The runtime matrix currently prepared in this repository is:
+The repository currently ships **two parallel runtime matrices**, each
+maintained on its own branch:
 
-| Component | Version |
-|---|---|
-| Node | `26.3.1` |
-| Bun | `1.3.14` |
-| npm | `12.0.1` |
-| fnm | `1.39.0` |
+| Branch | Node | Bun | npm | fnm | Status |
+|---|---|---|---|---|---|
+| `n26.3.1_b1.3.14` | `26.3.1` | `1.3.14` | `12.0.1` | `1.39.0` | Active / future |
+| `n22.21.1_b1.3.14` | `22.21.1` | `1.3.14` | `10.9.4` | `1.38.1` | Active / LTS consumers (e.g. `logistics-app`) |
+
+Both branches share the same wrapper fixes (exit code propagation,
+global-install detection, stderr logging). To consume either, pin the
+corresponding tag (e.g. `v4_n22.21.1_b1.3.14` or `v5_n26.3.1_b1.3.14`).
+
+See [VERSIONING.md](./VERSIONING.md) for the tag-naming policy and
+how to add a new matrix.
 
 ## Tagging model
 

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
+  `bun_original`'s exit code via `exit "${bun_original_exit:-0}"`. Previously the
+  wrapper returned 0 unconditionally, which broke `set -e` in CI pipelines and
+  caused jobs to be marked as successful even when bun failed (compounded by
+  stale artifacts in `build/`).
+- **Wrapper global-install detection**: detection now covers `bun add -g`,
+  `bun add --global`, `bun a -g`, `bun a --global` (in addition to the legacy
+  `bun install -g`). Previously `chmod -R 777 /usr/share/bun` only ran on the
+  exact `i`/`install` subcommand, leaving modern installs with restrictive
+  permissions on the share folder.
+- **Wrapper logs to stderr**: `Running bun_wrapper.sh ...` and
+  `Giving permissions ...` messages moved from stdout to stderr. Previously
+  they contaminated the output of any caller that piped or parsed
+  `bun ...` stdout, breaking CI log filters and downstream parsers.
+- **Dockerfile `bun --version` no longer aborts build**: the sanity check
+  uses `|| echo "[warn] ..."` so a transient bun failure does not block the
+  image build. The wrapper was already created and chmodded above; this only
+  confirms the wiring is intact.
+- **Dockerfile base image pinned**: `FROM cartagodocker/zsh:latest` changed
+  to `FROM cartagodocker/zsh:v1.0.2` for reproducible builds.
+- **Dockerfile redundant `fnm use` removed**: `fnm default ${NODE_DEFAULT_VERSION}`
+  already establishes the default; the following `fnm use` was a no-op.
+
+### Changed
+- **`.dockerignore` populated**: previously empty, now excludes `.git`, `.github`,
+  `.vscode`, `*.md`, `LICENSE` and other non-essential files from the build
+  context.
+
 ## [1.1.2] - 2025-11-12
 
 ### Fixed

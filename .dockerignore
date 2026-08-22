@@ -1,0 +1,30 @@
+# Excluir todo lo que el Dockerfile NO necesita.
+# El unico COPY de este Dockerfile es './scripts', asi que todo lo
+# demas es ruido en el contexto de Docker.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Configuracion local / IDEs
+.vscode
+.idea
+
+# Documentacion (no se copia a la imagen)
+*.md
+LICENSE
+
+# CI de GitHub (workflows corre en GH Actions, no dentro de la imagen)
+.github
+
+# El directorio scripts/ se copia entero, pero excluimos backups
+# y archivos de OS dentro de el.
+scripts/.DS_Store
+scripts/*.swp
+
+# Logs / temp
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

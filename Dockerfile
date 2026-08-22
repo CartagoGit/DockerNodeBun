@@ -1,4 +1,9 @@
-FROM cartagodocker/zsh:latest
+# Base image: cartagodocker/zsh — Ubuntu 24.04 + zsh + fnm. Pinneada a
+# un tag concreto (no `latest`) para garantizar builds reproducibles.
+# Consultar https://hub.docker.com/r/cartagodocker/zsh/tags para tags
+# disponibles. Se elige un tag estable (no rc) compatible con esta
+# imagen (debe traer zsh; nosotros añadimos sudo y ca-certificates).
+FROM cartagodocker/zsh:v1.0.2
 USER root
 
 # Versions
@@ -33,7 +38,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     BUN_INSTALL=${BUN_HOME}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip ca-certificates libatomic1 \
+    unzip ca-certificates libatomic1 sudo \
     # Install fnm
     && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
     && mkdir -p ${FNM_BIN} \
@@ -43,7 +48,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fnm install ${NODE_DEFAULT_VERSION} \
     && fnm default ${NODE_DEFAULT_VERSION} \
     && eval $(fnm env) \
-    && fnm use ${NODE_DEFAULT_VERSION} \
     && npm install -g npm@${NPM_VERSION} \
     && node --version \
     && npm --version \
