@@ -32,20 +32,25 @@ jobs:
           echo "IMAGE_TAG=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:$VERSION_TAG" >> "$GITHUB_ENV"
 
       - name: Check if the tag already exists on Docker Hub
+        id: check
         run: |
-          TAG_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}/tags/${{ env.VERSION_TAG }}/")
-          echo "Checking tag: ${{ env.VERSION_TAG }}"
-          echo "HTTP Status: $TAG_EXISTS"
-          if [ "$TAG_EXISTS" -eq 200 ]; then
-            echo "Tag already exists, skipping publish"
-            exit 1
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}/tags/${{ env.VERSION_TAG }}/")
+          echo "Tag check HTTP: $HTTP"
+          if [ "$HTTP" -eq 200 ]; then
+            echo "Tag ${{ env.VERSION_TAG }} already exists on Docker Hub"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${{ env.VERSION_TAG }} is new"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Docker image
+        if: steps.check.outputs.exists != 'true'
         run: |
           docker build -t "${{ env.IMAGE_TAG }}" .
 
       - name: Push Docker image
+        if: steps.check.outputs.exists != 'true'
         run: |
           docker push "${{ env.IMAGE_TAG }}"
 
@@ -58,11 +63,22 @@ jobs:
       #   - 'latest' nunca es un build independiente: siempre se construye
       #     como alias (docker tag) de un tag pinneable que ya paso por el
       #     proceso de release completo.
+      #   - Si la imagen no esta localmente (caso comun cuando el tag
+      #     pinneable se pushea manualmente y luego se retaguea desde GH),
+      #     se hace docker pull por digest para tener el blob disponible.
       - name: Update 'latest' tag (only for canonical matrix)
         if: startsWith(env.VERSION_TAG, 'v') && contains(env.VERSION_TAG, '_n26.3.1_b1.3.14')
         run: |
           echo "Pinning ${{ env.VERSION_TAG }} to 'latest' (canonical matrix n26.3.1_b1.3.14)"
           LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:latest"
+
+          # Asegurar que IMAGE_TAG existe localmente (puede haber sido
+          # pusheada manualmente antes de este run).
+          if ! docker image inspect "${{ env.IMAGE_TAG }}" >/dev/null 2>&1; then
+            echo "Local image not found, pulling from Docker Hub..."
+            docker pull "${{ env.IMAGE_TAG }}"
+          fi
+
           # docker tag es local + atomico: mismo blob, dos nombres.
           # El push siguiente es el que actualiza el puntero en el registry.
           docker tag "${{ env.IMAGE_TAG }}" "$LATEST_TAG"
