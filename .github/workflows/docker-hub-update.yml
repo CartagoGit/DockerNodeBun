@@ -115,7 +115,7 @@ jobs:
         # para reproducibilidad y supply-chain.
         run: |
           YQ_VERSION="v4.40.5"
-          YQ_SHA="8847f57d1852d81ada5c4c54f842277f876eb1c5d4015cd06c4b96506d10d067"
+          YQ_SHA="0d6aaf1cf44a8d18fbc7ed0ef14f735a8df8d2e314c4cc0f0242d35c0a440c95"
           curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
               -o /usr/local/bin/yq
           echo "${YQ_SHA}  /usr/local/bin/yq" | sha256sum -c -
