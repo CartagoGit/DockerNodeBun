@@ -253,48 +253,75 @@ mirrors it directly.
 
 ## Recommended release sequence
 
-El flujo normal es taggear → el workflow publica. Pero si quieres
-probar en local antes:
+El flujo normal es taggear → el workflow publica automáticamente.
+NO hay que mergear ramas manualmente: el manifesto `.github/matrices.yml`
+es la única fuente de verdad de qué imágenes se publican.
+
+### Opción A: tag trigger (recomendada, publica todas las matrices)
 
 ```bash
-# Reemplaza X.Y.Z por la version de correcciones que quieras
-# (debe coincidir con ARG VERSION del Dockerfile) y la matriz por
-# la rama activa. El tag final sigue el formato v{X.Y.Z}_n..._b...
-#
-# Ejemplo: v1.0.1 (correcciones) + n26.3.1_b1.3.14 (matriz).
-PLACEHOLDER_TAG=v1.0.1_n26.3.1_b1.3.14
-VERSION=1.0.1
+# 1. Bump del VERSION en el Dockerfile (X.Y.Z)
+#    Editar: ARG VERSION=1.0.1  ->  ARG VERSION=1.0.2
+# 2. Commitear el bump en main
+git commit -am "chore: bump VERSION to 1.0.2"
+# 3. Tag trigger (sin sufijo de matriz)
+git tag v1.0.2
+git push origin main v1.0.2
+# 4. El workflow lee .github/matrices.yml y publica N imágenes:
+#    v1.0.2_n22.21.1_b1.3.14
+#    v1.0.2_n26.3.1_b1.3.14
+#    (una por cada matriz con status: active)
+```
 
-# 1. Build con --build-arg VERSION para que la imagen lo exponga
+### Opción B: tag matrix (re-publicar una sola matriz)
+
+Útil si quieres re-pushear una imagen específica tras un fallo
+transitorio, o si quieres saltarte el manifesto del:
+
+```bash
+git tag v1.0.2_n26.3.1_b1.3.14
+git push origin v1.0.2_n26.3.1_b1.3.14
+# Solo publica v1.0.2_n26.3.1_b1.3.14 (el resto del manifesto
+# NO se publica).
+```
+
+### Smoke-test local antes de taggear
+
+```bash
+# X.Y.Z (correcciones del repo) viene del ARG VERSION del Dockerfile.
+# Lo puedes override por CLI sin editar el Dockerfile:
 docker build \
-    --build-arg VERSION="$VERSION" \
-    -t "cartagodocker/nodebun:$PLACEHOLDER_TAG" \
+    --build-arg VERSION=1.0.1 \
+    -t cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
     -f ./Dockerfile ./
 
-# 2. Smoke-test: verify the four runtimes are wired correctly
-docker run --rm --entrypoint /bin/sh \
-    "cartagodocker/nodebun:$PLACEHOLDER_TAG" \
+# Verify the four runtimes are wired correctly
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
     -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
         && node --version && npm --version && bun --version && fnm --version'
-
-# 3. Tag and push (el workflow publica en DockerHub)
-git tag "$PLACEHOLDER_TAG"
-git push origin "$PLACEHOLDER_TAG"
 ```
 
 ## Versioning
 
-El contador `X.Y.Z` se declara como `ARG VERSION` en el Dockerfile.
+El contador `X.Y.Z` se declara como `ARG VERSION` en el Dockerfile y es
+**single source of truth** del contador de correcciones del repo.
 Ver [VERSIONING.md](./VERSIONING.md) para la política completa:
 
 - `X` (major): cambios incompatibles (drop de runtime, cambio de base).
 - `Y` (minor): features compatibles (nuevas matrices, nuevas flags).
 - `Z` (patch): bugfixes puros.
 
-El workflow parsea `X.Y.Z` del tag (`sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+)_.*/\1/'`)
-y lo pasa como `--build-arg VERSION` al build. Para bumpear: editar el
-`ARG VERSION` en el Dockerfile, mergear en todas las ramas activas,
-tagear con el mismo `X.Y.Z`.
+El workflow parsea `X.Y.Z` del tag con bash regex
+(`^v([0-9]+\.[0-9]+\.[0-9]+)_`) y lo pasa como `--build-arg VERSION`
+al build. Para bumpear:
+
+1. Editar el `ARG VERSION` en el Dockerfile.
+2. Commitear en `main`.
+3. Pushear el tag trigger `v{X.Y.Z}` — el workflow publica N imágenes.
+
+No hay ramas de matriz que mantener — el workflow lee las versiones de
+runtime de `.github/matrices.yml`. Añadir/quitar una matriz es un commit
+al manifiesto, sin tocar código.
 
 ## Legacy tags
 
