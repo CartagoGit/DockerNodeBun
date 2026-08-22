@@ -156,6 +156,15 @@ jobs:
           fi
 
           COUNT=0
+          # El plan usa TAB como delimitador. El description no puede
+          # contener tabs ni newlines (rompen IFS y printf downstream).
+          # En vez de intentar sanitizar downstream (donde jq ya habria
+          # rehusado parsear JSON con control chars sin escape),
+          # validamos el campo description aqui mismo, ANTES de iterar.
+          #
+          # Si hay una description malformada, fail loud con la lista
+          # de offending entries. Asi el mantenedor ve el problema al
+          # pushear el tag, no en el build step.
           while IFS='|' read -r name status node bun fnm npm description; do
             [[ -z "$name" ]] && continue
             if [[ "$status" != "active" && -z "${MATRIX_NAME:-}" ]]; then
@@ -163,8 +172,20 @@ jobs:
               echo "::notice::Skipping deprecated matrix: $name ($description)"
               continue
             fi
+            # Validar description: no tabs, no newlines, no NUL, no
+            # caracteres de control. Si falla, log + exit 1.
+            if [[ "$description" =~ $'\t' ]] || [[ "$description" =~ $'\n' ]] || \
+               [[ "$description" =~ [[:cntrl:]] ]]; then
+              echo "Error: matrix '$name' has invalid description (contains control chars, tabs or newlines): '$description'" >&2
+              echo "       Description must be plain printable ASCII." >&2
+              exit 1
+            fi
             TAG="${TRIGGER_TAG}_${name}"
-            echo -e "${name}\t${node}\t${bun}\t${fnm}\t${npm}\t${status}\t${TAG}\t${description}" >> "$PLAN_FILE"
+            # printf %s es seguro: no interpreta escapes, no emite
+            # newline extra (\n explicito). La description ya viene
+            # validada como printable ASCII.
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                "$name" "$node" "$bun" "$fnm" "$npm" "$status" "$TAG" "$description" >> "$PLAN_FILE"
             COUNT=$((COUNT + 1))
           done < <(MATRIX_NAME="${MATRIX_NAME:-}" \
                    yq eval "$FILTER" --output-format=json .github/matrices.yml \

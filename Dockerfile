@@ -105,9 +105,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && (rm -rf /var/lib/apt/lists/* /tmp/* || true)
 
-# Add to .zshrc the configuration for fnm and bun
+# Add to .zshrc the configuration for fnm and bun.
+# Usamos el helper `add_text_to_zshrc` del base image
+# cartagodocker/zsh:v1.0.2 (codigo en https://github.com/CartagoGit/DockerZsh).
+# Es parte del contrato del base image y maneja correctamente la
+# creacion del HOME del usuario activo (root en este RUN) y la
+# idempotencia (no duplica bloques si se rebuilda).
 RUN add_text_to_zshrc "$(printf '%s\n' \
-    '# Asign autocomplete for fnm' \
+    '# Autocomplete for fnm' \
     'fpath=(${FNM_BIN} $fpath)' \
     'eval $(fnm env)' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
@@ -115,7 +120,7 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     )"
 
 # Nota: no cambiamos a USER 1000:1000 al final. Razon:
-#   - 'add_text_to_zshrc' escribe al HOME del usuario activo (root
+#   - El bloque anterior escribe al HOME del usuario activo (root
 #     durante este RUN), o sea /root/.zshrc. Si cambiaramos a USER
 #     1000:1000 despues, los consumidores que ejecuten como ese
 #     usuario (lx-app compose usa 'user: 1000:1000') tendrian
