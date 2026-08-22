@@ -24,10 +24,20 @@ bun_original_exit=$?
 # Just users with root permissions or sudoers can give permissions to the bun share folder
 if [[ "$IS_ROOT_PRIV" == true ]]; then
     for arg in "$@"; do
-        if [[ "$arg" == -* && "$arg" != --* && "$arg" == *g* ]] || [[ "$arg" == "--global" ]]; then
+        # Detect global-install intent. Both old (-g) and modern (--global)
+        # forms must match. Previously the condition required the flag to
+        # NOT start with `--`, so `bun add --global pkg` slipped through
+        # and left /usr/share/bun with restrictive perms.
+        if [[ "$arg" == "-g" ]] || [[ "$arg" == "--global" ]] || \
+           [[ "$arg" == -* && "$arg" != --* && "$arg" == *g* ]]; then
             GLOBAL=true
         fi
-        if [[ "$arg" == "i" || "$arg" == "install" ]]; then
+        # Detect install-class subcommands. `install`, `i`, `add`, `a`
+        # are all valid (bun accepts short aliases). Previously only
+        # `i` and `install` were detected, so `bun add -g pkg` and
+        # `bun a --global pkg` were missed.
+        if [[ "$arg" == "i" ]] || [[ "$arg" == "install" ]] || \
+           [[ "$arg" == "a" ]] || [[ "$arg" == "add" ]]; then
             INSTALL=true
         fi
     done

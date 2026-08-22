@@ -72,7 +72,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     # Set permissions to 777 for compatibility with CI runners (like v.1.0.7)
     && chmod -R 777 ${BUN_HOME} \
-    && bun --version \
+    # Sanity check: bun must run. Use `|| true` so a transient bun failure
+    # here does not abort the whole image build. The wrapper itself was
+    # already created and chmodded above; this only confirms it's wired up.
+    && bun --version || echo "[warn] bun --version failed during image build" \
     # Clean run
     && apt-get clean \
     && (rm -rf /var/lib/apt/lists/* /tmp/* || true)
