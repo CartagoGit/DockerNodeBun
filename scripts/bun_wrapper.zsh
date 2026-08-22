@@ -1,5 +1,12 @@
 #!/bin/bash
 # Output -> /usr/local/bin/bun_wrapper.sh
+#
+# Reglas de output:
+#   - Todo lo que imprima este wrapper va a STDERR, NO stdout.
+#     Razon: muchos callers (CI, scripts) hacen 'bun ... | head -5' o
+#     redirigen stdout a parsers. Si el wrapper contamina stdout con
+#     'Running bun_wrapper.sh...', los parsers se rompen.
+#   - El output real de bun_original se mantiene en stdout intacto.
 
 GLOBAL=false
 INSTALL=false
@@ -11,7 +18,7 @@ elif command -v sudo &>/dev/null && sudo -v &>/dev/null; then
     IS_ROOT_PRIV=true
 fi
 
-echo "Running bun_wrapper.sh script with parameters: $@"
+echo "Running bun_wrapper.sh script with parameters: $@" >&2
 
 # Propagate the exit code from bun_original so callers can rely on `set -e`
 # and CI pipelines correctly detect failed builds (job marked failed when
@@ -45,7 +52,7 @@ if [[ "$IS_ROOT_PRIV" == true ]]; then
     # Verify if it is bun, global and install
     if [[ "$GLOBAL" == true && "$INSTALL" == true ]]; then
         # If it is a global installation, we give permissions to the bun share folder
-        echo "Giving permissions to the bun share folder (${BUN_HOME})"
+        echo "Giving permissions to the bun share folder (${BUN_HOME})" >&2
         chmod -R 777 ${BUN_HOME}
     fi
 fi
