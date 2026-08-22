@@ -13,8 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        # Pin to SHA for supply-chain security. v4.2.2
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        # Pin to SHA for supply-chain security. v5.1.0 uses Node 24
+        # (GitHub is deprecating Node 20 in actions/checkout v4.x).
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Authenticate against Docker Hub API
         env:
