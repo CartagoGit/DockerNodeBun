@@ -283,14 +283,9 @@ jobs:
       # El tag 'latest' no se publica desde este repo. VERSIONING.md explica
       # el rationale (reproducibilidad, cada consumidor fija su tag exacto).
 
-  # Nota: el job 'breakpoint-reminder' fue eliminado. Era un
-  # recordatorio CI para crear el tag breakpoint_v{X.Y.Z} despues
-  # de publicar v{X.Y.Z}. Se decidio quitarlo porque:
-  #   - Anadia complejidad al workflow sin valor real (era solo
-  #     un ::notice:: que el mantenedor ya sabe leer).
-  #   - Acoplaba el workflow a decisiones humanas.
-  #   - Si quieres saber si hay breakpoints, usa:
-  #       git tag -l 'breakpoint_*'
-  #     o documenta la lista en VERSIONING.md.
-  # El concepto de breakpoint sigue existiendo (tag-breakpoint.sh
-  # + seccion en VERSIONING.md), solo se quito el job de CI.
+  # Nota historica: existio un job 'breakpoint-reminder' que emitia
+  # un ::notice:: cuando se publicaba un tag trigger v{X.Y.Z} sin su
+  # breakpoint_v{X.Y.Z}. Se decidio eliminar el sistema de breakpoints
+  # entero (job + script + concepto). La rotura estructural se registra
+  # ahora directamente en el bump X.Y.Z (X cuando hay cambio
+  # incompatible). Ver VERSIONING.md para la politica vigente.

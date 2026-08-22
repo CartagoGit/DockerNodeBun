@@ -26,36 +26,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.github/workflows/docker-hub-update.yml` (que parsea el tag con
   bash regex), y se exporta como `ENV VERSION=${VERSION}` para que
   `docker inspect` muestre la versión de correcciones aplicada.
-  Valor inicial elegido en `1.0.1` (saltándose `1.0.0`) para evitar
-  colisión visual con los tags legacy `v1_*` del esquema 2.
-- **Concepto de "breakpoint" introducido**: tags `breakpoint_v{X.Y.Z}`
-  marcan commits estructurales del repo, ortogonales a la dimensión
-  VERSION. El primer breakpoint será `breakpoint_v1.0.1`, que coincide
-  con la migración al modelo "tag trigger + manifesto". En el futuro,
-  `git log --oneline --tags='breakpoint_*'` listará todas las roturas
-  estructurales con su VERSION al lado.
+- **Bump inicial `X.Y.Z` = `2.0.0`**: el salto a `2.0.0` (major)
+  refleja la rotura del modelo de publicacion: trigger tag + manifesto
+  + eliminacion de ramas de matriz. La "rotura" se registra en el
+  bump X.Y.Z, no en un tag paralelo.
 
 ### Added
 - **`.github/matrices.yml`**: manifesto canónico de las matrices activas
   (status: active) y deprecadas (status: deprecated). Es la única
   fuente de verdad sobre qué imágenes publica el workflow. Añadir o
   quitar una matriz es un commit a este archivo, sin tocar código.
-- **`scripts/tag-breakpoint.sh`**: helper para crear tags
-  `breakpoint_v{X.Y.Z}` que apuntan al mismo commit que `v{X.Y.Z}`.
-  Los breakpoints marcan roturas estructurales del repo (refactors
-  mayores, cambios de contrato), ortogonales al versionado X.Y.Z.
-  No pushea automáticamente — es decisión del mantenedor.
 
 ### Removed
 - **Job `breakpoint-reminder`** eliminado del workflow
   `docker-hub-update.yml`. Era un job CI que emitia un `::notice::`
   cuando se publicaba un tag trigger `v{X.Y.Z}` sin su
-  `breakpoint_v{X.Y.Z}` correspondiente. Se decidio quitarlo porque:
-  anadia complejidad sin valor real (era solo un notice que el
-  mantenedor ya sabia leer), acoplaba el workflow a decisiones
-  humanas, y si fallaba el build nunca corria. El sistema de
-  breakpoints sigue existiendo (script + seccion en VERSIONING.md),
-  solo se quito el recordatorio automatico.
+  `breakpoint_v{X.Y.Z}` correspondiente. Anadia complejidad sin valor
+  real.
+- **Sistema de breakpoints completo**: el script
+  `scripts/tag-breakpoint.sh`, la seccion de "Breakpoints" en
+  VERSIONING.md y README.md, y la nocion de tags `breakpoint_v{X.Y.Z}`
+  han sido eliminados. La "rotura estructural" ahora se registra
+  directamente en el bump X.Y.Z (con `X` cuando hay cambio
+  incompatible). Mas simple, menos ceremonias, la rotura es visible
+  en el propio tag.
 
 ### Changed (post-audit)
 - **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**.

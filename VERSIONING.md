@@ -30,7 +30,7 @@ Donde:
   - `Z` (patch) se incrementa cuando hay bugfixes puros del wrapper,
     del Dockerfile o de los workflows.
   - Este contador **se publica en TODAS las matrices en paralelo**.
-    Es decir, `v1.0.1_n22.21.1_b1.3.14` y `v1.0.1_n26.3.1_b1.3.14`
+    Es decir, `v2.0.0_n22.21.1_b1.3.14` y `v2.0.0_n26.3.1_b1.3.14`
     tienen exactamente las mismas correcciones aplicadas al repo.
 - **`n{x.y.z}`** y **`b{x.y.z}`** son siempre tres segmentos
   (MAJOR.MINOR.PATCH). Nunca se acortan, porque el patch importa:
@@ -63,33 +63,33 @@ comparando solo el tag.
 
 El nuevo esquema separa las dos dimensiones:
 
-- `v1.0.1_n22.21.1_b1.3.14` y `v1.0.1_n26.3.1_b1.3.14` tienen
+- `v2.0.0_n22.21.1_b1.3.14` y `v2.0.0_n26.3.1_b1.3.14` tienen
   **exactamente las mismas correcciones aplicadas al repo** pero
   distintos runtimes.
-- `v1.0.1_n22.21.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` tienen el
+- `v2.0.0_n22.21.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` tienen el
   mismo runtime pero distintas correcciones del wrapper/Dockerfile.
-- `v1.0.1_n26.3.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` difieren
+- `v2.0.0_n26.3.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` difieren
   en ambos ejes — son imágenes completamente distintas.
 
 ### Ejemplos
 
 | Tag | Significado |
 |---|---|
-| `v1.0.1_n22.21.1_b1.3.14` | Primer release del repo, matriz Node 22 LTS |
-| `v1.0.1_n26.3.1_b1.3.14` | Mismo release, matriz Node 26 |
+| `v2.0.0_n22.21.1_b1.3.14` | Primer release del repo, matriz Node 22 LTS |
+| `v2.0.0_n26.3.1_b1.3.14` | Mismo release, matriz Node 26 |
 | `v1.0.2_n22.21.1_b1.3.14` | Bugfix del wrapper, matriz Node 22 |
 | `v1.0.2_n26.3.1_b1.3.14` | Mismo bugfix del wrapper, matriz Node 26 |
 | `v1.1.0_n22.21.1_b1.3.14` | Feature nuevo (ej. nuevo binario en PATH), matriz Node 22 |
 | `v2.0.0_n22.21.1_b1.3.14` | Cambio incompatible (ej. drop de Node 18 si se anade), matriz Node 22 |
-| `v1.0.1_n28.0.0_b1.5.0` | Cuando salga Node 28 + bun 1.5 — X.Y.Z se mantiene en `v1.0.1` |
-| `v1.0.1_n26.3.1_b1.4.0` | Bump de bun a 1.4 — X.Y.Z se mantiene en `v1.0.1` |
+| `v2.0.0_n28.0.0_b1.5.0` | Cuando salga Node 28 + bun 1.5 — X.Y.Z se mantiene en `v2.0.0` |
+| `v2.0.0_n26.3.1_b1.4.0` | Bump de bun a 1.4 — X.Y.Z se mantiene en `v2.0.0` |
 
 ### Comandos utiles
 
 ```bash
 git tag -l "v*_n22.21.1*"             # todas las imagenes con matriz node 22
 git tag -l "v*_n26.3.1*"             # todas las imagenes con matriz node 26
-git tag -l "v1.0.1_*"                # todas las imagenes con mismas correcciones v1.0.1
+git tag -l "v2.0.0_*"                # todas las imagenes con mismas correcciones v2.0.0
 git tag -l "v1.*_n22*"               # correcciones v1.x sobre node 22 (cualquier minor/patch)
 ```
 
@@ -98,7 +98,7 @@ git tag -l "v1.*_n22*"               # correcciones v1.x sobre node 22 (cualquie
 | Tag | Significado |
 |---|---|
 | `v1_n22.12.0_b1.1.42` | Estado legacy (no se publica con el nuevo canon, ver "Tags legacy" abajo) |
-| `v1.0.1_n22.21.1_b1.3.14` | Canon vigente: correcciones v1.0.1 + matriz Node 22 |
+| `v2.0.0_n22.21.1_b1.3.14` | Canon vigente: correcciones v2.0.0 + matriz Node 22 |
 
 ### Por qué el v{X.Y.Z} es semver ligero (no contador de "republish")
 
@@ -151,7 +151,7 @@ Tags `v{X.Y.Z}_n..._b...` (semver ligero, este documento).
 > ⚠️ Distincion visual:
 > - Esquema 1: `v.1.1.2` (con punto, 3 niveles)
 > - Esquema 2: `v4_n26.3.1_b1.3.14` (1 nivel despues de `v`)
-> - Esquema 3: `v1.0.1_n26.3.1_b1.3.14` (3 niveles despues de `v`)
+> - Esquema 3: `v2.0.0_n26.3.1_b1.3.14` (3 niveles despues de `v`)
 
 ---
 
@@ -195,20 +195,20 @@ Bumpear cuando cambia node, bun, fnm o npm:
 ### Reglas combinadas
 
 - Cambio solo de runtime (ej. node 22.21.1 → 22.21.2, fix de V8) →
-  mismo `X.Y.Z`, sufijo `n` cambia. Ej: `v1.0.1_n22.21.1_b1.3.14` →
-  `v1.0.1_n22.21.2_b1.3.14`.
+  mismo `X.Y.Z`, sufijo `n` cambia. Ej: `v2.0.0_n22.21.1_b1.3.14` →
+  `v2.0.0_n22.21.2_b1.3.14`.
 - Cambio solo de correcciones (ej. wrapper bugfix) → `Z` sube,
-  sufijo `n..._b...` igual. Ej: `v1.0.1_n22.21.1_b1.3.14` →
+  sufijo `n..._b...` igual. Ej: `v2.0.0_n22.21.1_b1.3.14` →
   `v1.0.2_n22.21.1_b1.3.14`.
 - Cambio de runtime Y de correcciones → ambos suben.
 - Cambio de major de node o bun → `X` se mantiene en `1`, sufijo cambia.
-  Ej: `v1.0.1_n22.21.1_b1.3.14` → `v1.0.1_n28.0.0_b1.5.0`.
+  Ej: `v2.0.0_n22.21.1_b1.3.14` → `v2.0.0_n28.0.0_b1.5.0`.
 
 ### Política para consumidores
 
-- Fijar la tripleta exacta: `v1.0.1_n22.21.1_b1.3.14`.
+- Fijar la tripleta exacta: `v2.0.0_n22.21.1_b1.3.14`.
 - Wildcard por matriz: `v*_n22.21.1_b1.3.14` (cualquier correccion).
-- Wildcard por correccion: `v1.0.1_*` (cualquier matriz).
+- Wildcard por correccion: `v2.0.0_*` (cualquier matriz).
 - Wildcard total: `v*` (no recomendado, todo cambia).
 
 ---
@@ -249,11 +249,11 @@ El workflow distingue dos tipos de tag:
 Cómo funciona internamente:
 
 ```
-git tag v1.0.1 && git push origin v1.0.1
+git tag v2.0.0 && git push origin v2.0.0
   ↓
 workflow dispara
   ↓
-parsea VERSION_TAG → VERSION=1.0.1, TRIGGER_TAG=v1.0.1, MATRIX_NAME=<none>
+parsea VERSION_TAG → VERSION=1.0.1, TRIGGER_TAG=v2.0.0, MATRIX_NAME=<none>
   ↓
 lee .github/matrices.yml → para cada status:active:
   nombre=n22.21.1_b1.3.14, node=22.21.1, bun=1.3.14, fnm=1.38.1, npm=10.9.4
@@ -266,8 +266,8 @@ para cada entrada del plan:
                --build-arg BUN_VERSION=1.3.14 \
                --build-arg FNM_VERSION=1.38.1 \
                --build-arg NPM_VERSION=10.9.4 \
-               -t cartagodocker/nodebun:v1.0.1_n22.21.1_b1.3.14 .
-  docker push cartagodocker/nodebun:v1.0.1_n22.21.1_b1.3.14
+               -t cartagodocker/nodebun:v2.0.0_n22.21.1_b1.3.14 .
+  docker push cartagodocker/nodebun:v2.0.0_n22.21.1_b1.3.14
 ```
 
 El workflow es **idempotente**: si vuelves a pushear el mismo tag, los
@@ -327,75 +327,28 @@ Si necesitas construir imágenes localmente (sin tag trigger):
 
 ---
 
-## Breakpoints (marcadores estructurales del repo)
+## Cómo marcar roturas estructurales
 
-Un **breakpoint** es un tag git puro (`breakpoint_v{X.Y.Z}`) que
-marca un commit específico del repo como una **rotura estructural
-de cómo funciona el repo**. Es ortogonal al versionado `v{X.Y.Z}`:
+Las roturas del repo (cambios de contrato, refactors mayores,
+nuevas arquitecturas) se registran **en el `X.Y.Z` mismo**, no en
+un tag paralelo. Si una versión representa una rotura real, se
+bumpea la `X` (major) o se documenta explicitamente en el
+CHANGELOG.md como `### Changed` con nota "BREAKING" o similar.
 
-- `v{X.Y.Z}` = correcciones del repo / runtime matrix.
-- `breakpoint_v{X.Y.Z}` = "este commit representa un antes/después
-  en la arquitectura del repo".
+La antigua idea de tags `breakpoint_v{X.Y.Z}` fue rechazada porque:
 
-Dimensiones que registra cada breakpoint:
+- Duplicaba información que ya está en el CHANGELOG.
+- Anadia complejidad operacional (un tag mas por cada rotura).
+- El `X.Y.Z` ya codifica la magnitud del cambio (major/minor/patch).
 
-- **Cuándo**: el commit timestamp.
-- **Qué VERSION introdujo el cambio**: el sufijo `vX.Y.Z`.
-- **Por qué**: el mensaje del tag describe la rotura.
-
-### Cuándo crear un breakpoint
-
-Crear un breakpoint **solo cuando el commit representa una rotación
-real** de la arquitectura, por ejemplo:
-
-- Cambio del modelo de publicación (ej. este commit:
-  `tag trigger + manifesto`, antes eran N ramas paralelas).
-- Cambio de contrato del wrapper.
-- Migración del base image.
-- Cambio del esquema de versionado (ej. esquema 2 → esquema 3).
-
-NO crear un breakpoint para:
-
-- Bump rutinario de `X.Y.Z` (bugfix sin cambio de contrato).
-- Bump de runtime (node, bun, fnm, npm) sin rotura de contrato.
-- Cambios puramente cosméticos o de docs.
-
-### Cómo crearlo
-
-Usa el script `scripts/tag-breakpoint.sh`:
+Para consultar roturas historicas en el futuro:
 
 ```bash
-# Ejemplo: tras tagear v1.0.1, marcar el commit como breakpoint
-scripts/tag-breakpoint.sh 1.0.1 "New publishing model: tag trigger + manifesto"
-git push origin v1.0.1 breakpoint_v1.0.1
+# Releases con bump major (cambios incompatibles):
+git tag -l 'v[2-9]*.0.0'
+
+# O leer el CHANGELOG.md directamente.
 ```
-
-El script:
-
-1. Verifica que `v{X.Y.Z}` existe localmente.
-2. Verifica que `breakpoint_v{X.Y.Z}` NO existe (evita duplicados).
-3. Crea el tag `breakpoint_v{X.Y.Z}` apuntando al mismo commit.
-4. **NO** pushea automáticamente — eso lo decides tú.
-
-### Cómo consultarlos en el futuro
-
-```bash
-# Lista de breakpoints, más reciente primero:
-git tag -l 'breakpoint_*' --sort=-creatordate
-
-# Timeline cronológico de las roturas estructurales:
-git log --oneline --tags='breakpoint_*' --topo-order
-
-# Detalle de un breakpoint concreto:
-git show breakpoint_v1.0.1
-```
-
-### Recordatorio automático
-
-No hay. El sistema de breakpoints es **puramente humano**: si
-decides que un commit merece un breakpoint, corres el script y
-pusheas el tag. No hay recordatorio en CI ni validación automatica
-de que se haya creado.
 
 ---
 
@@ -425,7 +378,7 @@ slice **S3**.
 
 | Antes (esquema 2) | Ahora (esquema 3) | Por qué |
 |---|---|---|
-| `v4_n26.3.1_b1.3.14` (contador N) | `v1.0.1_n26.3.1_b1.3.14` (semver ligero X.Y.Z) | Separa "correcciones del repo" de "publicación de la misma matriz" |
+| `v4_n26.3.1_b1.3.14` (contador N) | `v2.0.0_n26.3.1_b1.3.14` (semver ligero X.Y.Z) | Separa "correcciones del repo" de "publicación de la misma matriz" |
 | `N` mezclaba dos dimensiones | `X.Y.Z` = correcciones, `n..._b...` = runtime | Se puede saber si dos imágenes tienen las mismas correcciones mirando el tag |
 | `v{N}` un solo dígito | `v{X.Y.Z}` tres dígitos (semver) | Más expresivo, escala mejor con el tiempo |
 
@@ -446,5 +399,4 @@ significado del segmento `v*`: pasó de "contador de republish" a
 | 2026-08-22 | Adopción del canon `v{X.Y.Z}_n{node}_b{bun}` (semver ligero) | Discusión con mantenedor: contador `N` mezclaba dos dimensiones |
 | 2026-08-22 | `X.Y.Z` se publica en paralelo en todas las matrices | Permite comparar correcciones entre imágenes de distintos runtimes |
 | 2026-08-22 | Modelo "tag trigger + manifesto" (`.github/matrices.yml`) | El workflow itera el manifesto y publica una imagen por matriz activa. Elimina la dependencia de ramas paralelas como fuente de runtime. |
-| 2026-08-22 | `X.Y.Z` inicial = `1.0.1` (saltándose `1.0.0`) | Evita colisión visual con tags legacy `v1_*` del esquema 2 |
-| 2026-08-22 | Sistema de `breakpoint_v{X.Y.Z}` para roturas estructurales del repo | Permite localizar commits estructurales del repo (refactors mayores, cambios de contrato) en cualquier momento futuro, ortogonal al versionado X.Y.Z |
+| 2026-08-22 | `X.Y.Z` inicial = `2.0.0` (major) | El salto a `2.0.0` marca la rotura mayor del modelo de publicacion: trigger tag + manifesto + eliminacion de ramas de matriz. La "rotura" se registra en el bump X.Y.Z, no en un tag paralelo. |

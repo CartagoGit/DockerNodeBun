@@ -21,7 +21,7 @@ USER root
 #     muestre la version de correcciones aplicada.
 #   - Para bumpear: editar este ARG default + commitear + tag con el
 #     mismo X.Y.Z en todas las matrices.
-ARG VERSION=1.0.1
+ARG VERSION=2.0.0
 ARG NODE_DEFAULT_VERSION=26.3.1
 ARG BUN_VERSION=1.3.14
 ARG FNM_VERSION=1.39.0

@@ -37,7 +37,7 @@ All active matrices share the same wrapper fixes (exit code propagation,
 global-install detection, stderr logging) because the workflow builds
 them from the same `Dockerfile` at the same git tag. To consume a
 specific matrix, pin its exact tag (e.g.
-`v1.0.1_n22.21.1_b1.3.14` or `v1.0.1_n26.3.1_b1.3.14`).
+`v2.0.0_n22.21.1_b1.3.14` or `v2.0.0_n26.3.1_b1.3.14`).
 
 See [VERSIONING.md](./VERSIONING.md) for the tag-naming policy and
 how to add a new matrix.
@@ -52,8 +52,8 @@ v{X.Y.Z}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 
 Examples:
 
-- `v1.0.1_n26.3.1_b1.3.14`
-- `v1.0.1_n28.0.0_b1.5.0`
+- `v2.0.0_n26.3.1_b1.3.14`
+- `v2.0.0_n28.0.0_b1.5.0`
 
 Meaning:
 
@@ -73,7 +73,7 @@ For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 Images are published with exact tags only.
 
-- We publish exact tags like `v1.0.1_n26.3.1_b1.3.14`.
+- We publish exact tags like `v2.0.0_n26.3.1_b1.3.14`.
 - We do not publish `latest`.
 - We do not publish `stable`.
 
@@ -125,18 +125,18 @@ That keeps the container runtime deterministic even when Node bundles change.
 # Lo puedes override por CLI sin editar el Dockerfile:
 docker build \
     --build-arg VERSION=1.0.1 \
-    -t cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
+    -t cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
     -f ./Dockerfile ./
 ```
 
-`docker inspect cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 | grep VERSION`
+`docker inspect cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 | grep VERSION`
 muestra `VERSION=1.0.1` como fuente de verdad de las correcciones
 del repo aplicadas a esa imagen.
 
 ### Verify the runtime matrix locally
 
 ```bash
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
     -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
         && node --version && npm --version && bun --version && fnm --version'
 ```
@@ -151,19 +151,19 @@ Expected output:
 ### Start an interactive container
 
 ```bash
-docker run --rm -it cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
+docker run --rm -it cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 ```
 
 ### Run the image as a non-root user
 
 ```bash
-docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
+docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 ```
 
 ### Use it as a base image
 
 ```dockerfile
-FROM cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14
+FROM cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 
 RUN eval $(fnm env) \
         && fnm use ${NODE_DEFAULT_VERSION} \
@@ -172,54 +172,18 @@ RUN eval $(fnm env) \
         && bun --version
 ```
 
-## Structural breakpoints (repo milestones)
+## Structural milestones
 
-A **breakpoint** is a structural marker on the repo itself, not on DockerHub. It tags a
-specific commit that represents a **structural break** of how the repo works (a major
-refactor, a contract change, a new architecture) — orthogonal to the runtime/runtime
-versioning.
+Major repo changes (contract breaks, big refactors, new architectures) are recorded in
+the **`X` (major) of the semver-light `X.Y.Z` counter**, not in a parallel tag. A bump
+of the major digit (e.g. `1.x.x` → `2.0.0`) is the visible signal that the repo's
+internals changed in a non-backward-compatible way.
 
-Breakpoints are pure **git tags** with the format:
-
-```text
-breakpoint_v{X.Y.Z}
-```
-
-They always point to the **same commit** as `v{X.Y.Z}` — the VERSION embedded in the
-tag tells you which release introduced that structural break.
-
-### Why breakpoints exist
-
-In 10 years, when someone asks "how did the publishing model change over time?", they can:
+To find historical major changes:
 
 ```bash
-git log --oneline --tags='breakpoint_*' --topo-order
-```
-
-and see every structural break in chronological order, with the VERSION at the time and
-the commit message explaining what changed.
-
-### How to create a breakpoint
-
-When you tag a release `v1.0.1` that you consider a structural break:
-
-```bash
-scripts/tag-breakpoint.sh 1.0.1 "New publishing model: tag trigger + manifesto"
-git push origin v1.0.1 breakpoint_v1.0.1
-```
-
-The script refuses to create a duplicate breakpoint tag (you'd have to delete and
-re-create if the version changes after the fact).
-
-The CI workflow does not auto-create breakpoints and does not remind you to do so.
-The decision is fully human — when you tag a structural break, you decide whether
-it deserves a breakpoint tag.
-
-### Listing breakpoints
-
-```bash
-git tag -l 'breakpoint_*'           # all breakpoint tags, newest first
-git log --oneline breakpoint_v1.0.1  # see the structural commit
+git tag -l 'v[2-9]*.0.0'             # all releases with a major bump
+cat CHANGELOG.md                     # human description of what changed
 ```
 
 ## Publishing workflow
@@ -291,11 +255,11 @@ git push origin v1.0.2_n26.3.1_b1.3.14
 # Lo puedes override por CLI sin editar el Dockerfile:
 docker build \
     --build-arg VERSION=1.0.1 \
-    -t cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
+    -t cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
     -f ./Dockerfile ./
 
 # Verify the four runtimes are wired correctly
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1.0.1_n26.3.1_b1.3.14 \
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14 \
     -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
         && node --version && npm --version && bun --version && fnm --version'
 ```
