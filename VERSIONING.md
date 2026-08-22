@@ -25,6 +25,10 @@ Donde:
 - **`n{x.y.z}`** y **`b{x.y.z}`** son siempre tres segmentos
   (MAJOR.MINOR.PATCH). Nunca se acortan, porque el patch importa:
   CVEs de V8 en Node y fixes del loader TS en bun justifican el patch.
+- **Matrices paralelas**: el repo puede mantener varias matrices
+  activas a la vez (ej. `n22.21.1_b1.3.14` para LTS consumers y
+  `n26.3.1_b1.3.14` como matriz canónica futura). Cada matriz tiene
+  su propio contador independiente y vive en su propia rama git.
 - El separador `_` (underscore) se eligió por **compatibilidad con el
   OCI Distribution Spec** que DockerHub y la mayoría de registries aplican
   a los tags (regex `[a-z0-9][a-z0-9._-]{0,127}`). El `+` (estilo
@@ -82,13 +86,14 @@ Los tags `v.1.0.0` … `v.1.1.2` existentes **NO se reescriben**:
 
 ## Política de bump
 
-- **Cambio de cualquier dígito de node o bun** → `v1_...` (el contador
-  reinicia porque cambia la matriz de runtimes).
-- **Rebuild de la misma matriz** (fix en `scripts/`, bump de imagen base,
-   limpieza de caché, etc.) → `v2_...`, `v3_...`, etc. **Sin tocar runtime**.
-- **Cambio de major de node o bun** → `v1_...` con la nueva matriz.
-- El consumidor puede fijar la matriz exacta (`v1_n26.3.1_b1.3.14`)
-  o seguir el head con un major+runtime pinned (no recomendado en CI).
+- **Cambio de cualquier dígito de node o bun** (major, minor, patch) →
+  el contador reinicia a `v1_...` con la nueva matriz.
+- **Rebuild de la misma matriz** (fix en `scripts/`, bump de imagen
+  base, limpieza de caché, corrección de bugs del wrapper, etc.) →
+  `v2_...`, `v3_...`, etc. **Sin tocar runtime**.
+- El consumidor puede fijar la matriz exacta
+  (`v4_n22.21.1_b1.3.14`, `v5_n26.3.1_b1.3.14`, etc.) o seguir el head
+  con un major+runtime pinned (no recomendado en CI).
 
 ---
 

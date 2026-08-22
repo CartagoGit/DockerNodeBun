@@ -1,5 +1,7 @@
 #!/bin/bash
-# Output -> /usr/local/bin/bun_wrapper.sh
+#
+# Wrapper instalado en /usr/local/bin/bun_wrapper.zsh (Dockerfile COPY)
+# y enlazado desde ${BUN_BIN}/bun.
 #
 # Reglas de output:
 #   - Todo lo que imprima este wrapper va a STDERR, NO stdout.
@@ -7,11 +9,16 @@
 #     redirigen stdout a parsers. Si el wrapper contamina stdout con
 #     'Running bun_wrapper.sh...', los parsers se rompen.
 #   - El output real de bun_original se mantiene en stdout intacto.
+#
+# Reglas de exit code:
+#   - Se propaga el exit code de bun_original via 'exit ${bun_original_exit}'.
+#     Antes el wrapper retornaba 0 siempre, lo que rompia 'set -e' en
+#     scripts CI: 'set -e; bun --silent run script' fallaba silenciosamente.
+#     Ver commit f025a67 (logs a stderr) y bc766fa (exit code).
 
 GLOBAL=false
 INSTALL=false
 IS_ROOT_PRIV=false
-# Check if the user has root permissions or is a sudoer
 if [[ $(id -u) -eq 0 ]]; then
     IS_ROOT_PRIV=true
 elif command -v sudo &>/dev/null && sudo -v &>/dev/null; then
@@ -20,49 +27,33 @@ fi
 
 echo "Running bun_wrapper.sh script with parameters: $@" >&2
 
-# Propagate the exit code from bun_original so callers can rely on `set -e`
-# and CI pipelines correctly detect failed builds (job marked failed when
-# bun fails). Previously the wrapper swallowed $?, making any bun failure
-# look like a 0 exit, which broke `set -e` in CI scripts and caused
-# "job succeeded without artifact" bugs.
 $BUN_HOME/bin/bun_original "$@"
 bun_original_exit=$?
 
-# Just users with root permissions or sudoers can give permissions to the bun share folder
+# Only root/sudoers get to relax permissions on the share folder.
 if [[ "$IS_ROOT_PRIV" == true ]]; then
     for arg in "$@"; do
-        # Detect global-install intent. Forms accepted by bun:
-        #   -g, -G            (short flag, case-insensitive)
-        #   --global          (long flag)
-        #   --global=true     (long flag with =value)
-        #   --global false    (long flag with space-separated value)
-        #   --g, --G, --glo, etc. (prefix matches, rare)
-        # Split on '=' first so '--global=true' is treated as the
-        # long flag, not as a flag whose value happens to be '=true'.
+        # Split on '=' first so '--global=true' is treated as the long
+        # flag, not as a flag whose value happens to be '=true'.
         flag_part="${arg%%=*}"
+        # Global flag: -g/-G short, --global long, --global=value,
+        # or any short flag containing g/G (e.g. -gx, legacy compat).
         if [[ "$flag_part" == "-g" ]] || [[ "$flag_part" == "-G" ]] || \
            [[ "$flag_part" == "--global" ]] || \
            [[ "$flag_part" == -* && "$flag_part" != --* && "$flag_part" == *[gG]* ]]; then
             GLOBAL=true
         fi
-        # Detect install-class subcommands. `install`, `i`, `add`, `a`
-        # are all valid (bun accepts short aliases). Previously only
-        # `i` and `install` were detected, so `bun add -g pkg` and
-        # `bun a --global pkg` were missed.
+        # Install-class subcommand: install, i, add, a (bun aliases).
         if [[ "$arg" == "i" ]] || [[ "$arg" == "install" ]] || \
            [[ "$arg" == "a" ]] || [[ "$arg" == "add" ]]; then
             INSTALL=true
         fi
     done
 
-    # Verify if it is bun, global and install
     if [[ "$GLOBAL" == true && "$INSTALL" == true ]]; then
-        # If it is a global installation, we give permissions to the bun share folder
         echo "Giving permissions to the bun share folder (${BUN_HOME})" >&2
         chmod -R 777 ${BUN_HOME}
     fi
 fi
 
-# Exit with bun_original's code so callers (set -e, CI steps) see the
-# real status. Without this the wrapper always returns 0.
 exit "${bun_original_exit:-0}"

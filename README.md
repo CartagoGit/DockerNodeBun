@@ -30,8 +30,8 @@ maintained on its own branch:
 
 | Branch | Node | Bun | npm | fnm | Status |
 |---|---|---|---|---|---|
-| `n26.3.1_b1.3.14` | `26.3.1` | `1.3.14` | `12.0.1` | `1.39.0` | Active / future |
-| `n22.21.1_b1.3.14` | `22.21.1` | `1.3.14` | `10.9.4` | `1.38.1` | Active / LTS consumers (e.g. `logistics-app`) |
+| `n26.3.1_b1.3.14` | `26.3.1` | `1.3.14` | `12.0.1` | `1.39.0` | Canonical matrix (futuro lx-app slice S3) |
+| `n22.21.1_b1.3.14` | `22.21.1` | `1.3.14` | `10.9.4` | `1.38.1` | LTS consumers (e.g. `logistics-app`) |
 
 Both branches share the same wrapper fixes (exit code propagation,
 global-install detection, stderr logging). To consume either, pin the
@@ -50,7 +50,7 @@ v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 
 Examples:
 
-- `v1_n26.3.1_b1.3.14`
+- `v6_n26.3.1_b1.3.14`
 - `v1_n28.0.0_b1.5.0`
 
 Meaning:
@@ -67,7 +67,7 @@ For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 Images are published with exact tags only.
 
-- We publish exact tags like `v1_n26.3.1_b1.3.14`.
+- We publish exact tags like `v6_n26.3.1_b1.3.14`.
 - We do not publish `latest`.
 - We do not publish `stable`.
 
@@ -115,13 +115,15 @@ That keeps the container runtime deterministic even when Node bundles change.
 ### Build the image locally
 
 ```bash
-docker build -t cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -f ./Dockerfile ./
+docker build -t cartagodocker/nodebun:v6_n26.3.1_b1.3.14 -f ./Dockerfile ./
 ```
 
 ### Verify the runtime matrix locally
 
 ```bash
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v6_n26.3.1_b1.3.14 \
+    -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
+        && node --version && npm --version && bun --version && fnm --version'
 ```
 
 Expected output:
@@ -134,19 +136,19 @@ Expected output:
 ### Start an interactive container
 
 ```bash
-docker run --rm -it cartagodocker/nodebun:v1_n26.3.1_b1.3.14
+docker run --rm -it cartagodocker/nodebun:v6_n26.3.1_b1.3.14
 ```
 
 ### Run the image as a non-root user
 
 ```bash
-docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v1_n26.3.1_b1.3.14
+docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v6_n26.3.1_b1.3.14
 ```
 
 ### Use it as a base image
 
 ```dockerfile
-FROM cartagodocker/nodebun:v1_n26.3.1_b1.3.14
+FROM cartagodocker/nodebun:v6_n26.3.1_b1.3.14
 
 RUN eval $(fnm env) \
         && fnm use ${NODE_DEFAULT_VERSION} \
@@ -179,14 +181,21 @@ mirrors it directly.
 
 ## Recommended release sequence
 
-For the next publication of the current runtime matrix:
+For the next publication of the current runtime matrix (replace the
+placeholder tag with the actual one being released):
 
 ```bash
-docker build -t cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -f ./Dockerfile ./
-docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v1_n26.3.1_b1.3.14 -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 && node --version && npm --version && bun --version && fnm --version'
-git push origin main
-git tag v1_n26.3.1_b1.3.14
-git push origin v1_n26.3.1_b1.3.14
+# 1. Build the image locally against the runtime matrix you intend to ship
+docker build -t cartagodocker/nodebun:v6_n26.3.1_b1.3.14 -f ./Dockerfile ./
+# 2. Smoke-test: verify the four runtimes are wired correctly
+docker run --rm --entrypoint /bin/sh cartagodocker/nodebun:v6_n26.3.1_b1.3.14 \
+    -lc 'eval $(fnm env) && fnm use ${NODE_DEFAULT_VERSION} >/dev/null 2>&1 \
+        && node --version && npm --version && bun --version && fnm --version'
+# 3. Push the merge commit that closed this release to origin
+git push origin <branch-with-this-release>
+# 4. Tag and push the tag (this triggers .github/workflows/docker-hub-update.yml)
+git tag v6_n26.3.1_b1.3.14
+git push origin v6_n26.3.1_b1.3.14
 ```
 
 ## Legacy tags
