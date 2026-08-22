@@ -57,13 +57,21 @@ For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 ## Published image contract
 
-Images are published with exact tags only.
+Images are published with exact tags as the **source of truth**.
 
 - We publish exact tags like `v1_n26.3.1_b1.3.14`.
-- We do not publish `latest`.
-- We do not publish `stable`.
+- We **also** publish `latest` as an alias of the latest digest of the
+  canonical matrix (currently `v*_n26.3.1_b1.3.14`). This is updated
+  automatically by `.github/workflows/docker-hub-update.yml` when a tag
+  matching that matrix is pushed.
+- We do **not** publish `stable`.
 
-That is intentional. Consumers must pin the exact runtime matrix they require.
+**Consumers that need reproducible builds** (CI, `logistics-app`, etc.)
+**must** pin an exact tag. `latest` is intended for local development
+and tooling and is not guaranteed to return the same digest across
+consecutive pulls.
+
+For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
 ## Environment variables exposed by the image
 
@@ -156,8 +164,11 @@ Publishing is split into two separate workflows.
 Workflow: [`.github/workflows/docker-hub-update.yml`](./.github/workflows/docker-hub-update.yml)
 
 - Trigger: push of a git tag matching `v*`
-- Behavior: builds and pushes only the exact tag that was pushed
-- Behavior: does not create or update `latest`
+- Behavior: builds and pushes the exact tag that was pushed
+- Behavior: when the pushed tag belongs to the canonical matrix
+  (`v*_n26.3.1_b1.3.14`), also re-tags and pushes `latest` so that
+  `latest` always points to the latest digest of that matrix. Tags from
+  other matrices (e.g. `v1_n22.21.1_b1.3.14`) do **not** touch `latest`.
 
 ### 2. Docker Hub description sync
 

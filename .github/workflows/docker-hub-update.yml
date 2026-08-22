@@ -48,3 +48,22 @@ jobs:
       - name: Push Docker image
         run: |
           docker push "${{ env.IMAGE_TAG }}"
+
+      # Politica de 'latest' (VERSIONING.md, seccion "Politica de latest y stable"):
+      #   - 'latest' apunta siempre al ultimo digest de la matriz canonica
+      #     actual (ahora v*_n26.3.1_b1.3.14).
+      #   - 'latest' se actualiza SOLO cuando el tag pusheado pertenece a esa
+      #     matriz. Otros tags (p.ej. v1_n22.21.1_b1.3.14 para lx-app, o
+      #     futuras matrices n28.x) NO mueven 'latest'.
+      #   - 'latest' nunca es un build independiente: siempre se construye
+      #     como alias (docker tag) de un tag pinneable que ya paso por el
+      #     proceso de release completo.
+      - name: Update 'latest' tag (only for canonical matrix)
+        if: startsWith(env.VERSION_TAG, 'v') && contains(env.VERSION_TAG, '_n26.3.1_b1.3.14')
+        run: |
+          echo "Pinning ${{ env.VERSION_TAG }} to 'latest' (canonical matrix n26.3.1_b1.3.14)"
+          LATEST_TAG="${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:latest"
+          # docker tag es local + atomico: mismo blob, dos nombres.
+          # El push siguiente es el que actualiza el puntero en el registry.
+          docker tag "${{ env.IMAGE_TAG }}" "$LATEST_TAG"
+          docker push "$LATEST_TAG"
