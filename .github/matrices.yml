@@ -1,0 +1,61 @@
+# Manifesto canónico de las matrices activas del repo.
+#
+# Este archivo es la ÚNICA fuente de verdad sobre qué imágenes se publican
+# cuando se pushea un tag v{X.Y.Z} en la rama principal. El workflow
+# .github/workflows/docker-hub-update.yml lo lee al construir.
+#
+# Cómo añadir una nueva matriz:
+#   1. Añadir una entrada abajo con status: active y las versiones.
+#   2. Commitear en main.
+#   3. Pushear el tag v{X.Y.Z} -> el workflow construye la nueva imagen.
+#
+# Cómo discontinuar una matriz:
+#   1. Cambiar status: active -> status: deprecated.
+#   2. Commitear en main.
+#   3. El workflow sigue construyendo esa imagen hasta que se quite
+#      del manifesto (los consumidores pueden migrar sin quedarse sin
+#      imagen de un día para otro).
+#   4. Cuando sepas que nadie la consume más, eliminar la entrada.
+#
+# Cómo eliminar una matriz:
+#   1. Quitar la entrada de este archivo.
+#   2. Commitear en main. Los tags ya publicados en DockerHub siguen
+#      disponibles (este repo no borra imágenes).
+#
+# Esquema de cada entrada:
+#   name:        Identificador corto que se usa en el tag final.
+#                Formato: n{node-3-segments}_b{bun-3-segments}.
+#                Si bun cambia de major, el nombre cambia (los consumidores
+#                pueden distinguir a simple vista).
+#   status:      active | deprecated. Solo `active` se publica por defecto.
+#                `deprecated` se construye una vez más para permitir migración
+#                y luego se ignora (el workflow loggea un warning).
+#   node:        Node.js version (MAJOR.MINOR.PATCH, 3 segmentos).
+#   bun:         Bun version (MAJOR.MINOR.PATCH, 3 segmentos).
+#   fnm:         fnm version (MAJOR.MINOR.PATCH, 3 segmentos).
+#   npm:         npm version (MAJOR.MINOR.PATCH, 3 segmentos). El npm que
+#                viene con Node se reemplaza por el pinneado aqui.
+#   description: Una frase. Aparece en logs y (futuro) en el README.
+#
+# Las versiones de node/bun/fnm/npm son siempre 3 segmentos — el patch
+# importa (CVEs de V8, fixes del loader TS de bun, etc.).
+#
+# Historial de cambios del manifiesto vive en git log de este archivo.
+# No mantener un changelog separado.
+
+matrices:
+  - name: n22.21.1_b1.3.14
+    status: active
+    node: 22.21.1
+    bun: 1.3.14
+    fnm: 1.38.1
+    npm: 10.9.4
+    description: "LTS consumers (e.g. logistics-app)"
+
+  - name: n26.3.1_b1.3.14
+    status: active
+    node: 26.3.1
+    bun: 1.3.14
+    fnm: 1.39.0
+    npm: 12.0.1
+    description: "Canonical matrix (future lx-app slice S3)"

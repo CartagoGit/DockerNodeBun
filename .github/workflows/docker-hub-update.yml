@@ -1,4 +1,23 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Images
+
+# Trigger:
+#   1. push de tag v*  -> el workflow determina si es un tag "trigger"
+#      (v{X.Y.Z} sin sufijo de matriz) o un tag "matrix"
+#      (v{X.Y.Z}_n..._b...) y actúa en consecuencia.
+#   2. workflow_dispatch con input tag_name -> mismo comportamiento.
+#
+# Modelo de publicación (2026-08-22):
+#   - El workflow lee .github/matrices.yml como única fuente de verdad
+#     sobre qué imágenes se publican.
+#   - Cuando se pushea un tag trigger v{X.Y.Z}, el workflow itera
+#     el manifiesto y construye/pushea una imagen por cada matriz
+#     activa (status: active). El tag final es v{X.Y.Z}_{nombre-matriz}.
+#   - Cuando se pushea un tag matrix v{X.Y.Z}_n..._b..., el workflow
+#     construye SOLO esa imagen (caso edge: publicar una matriz
+#     específica sin re-publicar las demás).
+#
+# Véase .github/matrices.yml y VERSIONING.md para el detalle del
+# esquema de versionado y el modelo de "tag trigger + manifesto".
 
 on:
   push:
@@ -7,21 +26,13 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag to build and push (e.g. v6_n22.21.1_b1.3.14)'
+        description: 'Tag to build and push. Either v{X.Y.Z} (publishes all active matrices from .github/matrices.yml) or v{X.Y.Z}_n..._b... (publishes one specific matrix).'
         required: true
         type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # NOTA: IMAGE_TAG NO se declara aqui en el env: del job. La razón
-    # es que este workflow se dispara de dos formas:
-    #   1. push de tag v* -> GITHUB_REF = refs/tags/<tag>
-    #   2. workflow_dispatch manual -> GITHUB_REF = refs/heads/main
-    # En el caso 2, el valor del env: del job seria literalmente
-    # 'cartagodocker/nodebun:refs/heads/main', un tag invalido.
-    # Por eso IMAGE_TAG se computa en el step 'Resolve tag name' y
-    # se exporta a GITHUB_ENV alli.
 
     steps:
       - name: Checkout repository
@@ -41,66 +52,202 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Resolve tag name
+        # Resuelve el tag (push vs dispatch), lo clasifica como trigger
+        # o matrix, y exporta a GITHUB_ENV las variables que el resto
+        # de steps necesitan: VERSION_TAG, TRIGGER_TAG, MATRIX_NAME.
         run: |
-          # Soporta dos disparadores:
-          #   1. push de tag v*: GITHUB_REF = 'refs/tags/<tag>'
-          #   2. workflow_dispatch: tag viene del input 'tag_name'
           set -euo pipefail
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION_TAG="${GITHUB_REF#refs/tags/}"
           else
-            # workflow_dispatch: el input se valida que exista
             VERSION_TAG="${{ inputs.tag_name }}"
             if [[ -z "$VERSION_TAG" ]]; then
               echo "Error: tag_name input is required for workflow_dispatch" >&2
               exit 1
             fi
           fi
-          echo "VERSION_TAG=$VERSION_TAG" >> "$GITHUB_ENV"
-          echo "IMAGE_TAG=${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}:$VERSION_TAG" >> "$GITHUB_ENV"
-          echo "Resolved IMAGE_TAG=$IMAGE_TAG"
+          echo "VERSION_TAG=$VERSION_TAG"
 
-      - name: Check if the tag already exists on Docker Hub
-        id: check
-        run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPO }}/tags/${{ env.VERSION_TAG }}/")
-          echo "Tag check HTTP: $HTTP"
-          if [ "$HTTP" -eq 200 ]; then
-            echo "Tag ${{ env.VERSION_TAG }} already exists on Docker Hub"
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          # Clasificar el tag. Regex:
+          #   trigger: vX.Y.Z (sin '_' después)
+          #   matrix:  vX.Y.Z_algo (con '_' después)
+          if [[ "$VERSION_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            # trigger: vX.Y.Z
+            TRIGGER_TAG="$VERSION_TAG"
+            MATRIX_NAME=""
+            echo "Tag type: TRIGGER (publishes all active matrices)"
+          elif [[ "$VERSION_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)_ ]]; then
+            # matrix: vX.Y.Z_n..._b...
+            TRIGGER_TAG="v${BASH_REMATCH[1]}"
+            # El nombre de la matriz es lo que va después del primer '_'
+            MATRIX_NAME="${VERSION_TAG#v*_}"
+            echo "Tag type: MATRIX (publishes one specific matrix: $MATRIX_NAME)"
           else
-            echo "Tag ${{ env.VERSION_TAG }} is new"
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build Docker image
-        if: steps.check.outputs.exists != 'true'
-        run: |
-          # Parsear el tag para extraer X.Y.Z (el primer segmento
-          # antes del primer '_'). Formato esperado (esquema 3):
-          #   v1.0.1_n22.21.1_b1.3.14
-          #   v1.0.1_n26.3.1_b1.3.14
-          # VERSION es el contador semver ligero de correcciones
-          # del repo. Se inyecta como --build-arg para que el
-          # Dockerfile lo vea y lo exponga como ENV VERSION.
-          #
-          # Si el tag no matchea, fallamos loud (antes el workflow
-          # hubiera pusheado una imagen sin VERSION inyectada).
-          if [[ ! "${{ env.VERSION_TAG }}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)_ ]]; then
-            echo "Error: tag '${{ env.VERSION_TAG }}' does not match scheme v{X.Y.Z}_n..._b..." >&2
-            echo "       See VERSIONING.md for the policy. Legacy tags (v{N}_n..._b... or v.MAJOR.MINOR.PATCH) are not accepted." >&2
+            echo "Error: tag '$VERSION_TAG' does not match scheme v{X.Y.Z} or v{X.Y.Z}_n..._b..." >&2
+            echo "       See VERSIONING.md for the policy." >&2
             exit 1
           fi
-          VERSION="${BASH_REMATCH[1]}"
-          echo "Extracted VERSION=$VERSION from tag ${{ env.VERSION_TAG }}"
-          docker build \
-            --build-arg VERSION="$VERSION" \
-            -t "${{ env.IMAGE_TAG }}" .
 
-      - name: Push Docker image
-        if: steps.check.outputs.exists != 'true'
+          # Extraer X.Y.Z (de la última regex que matcheó)
+          if [[ -n "${BASH_REMATCH[1]:-}" ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "Error: could not extract X.Y.Z from $VERSION_TAG" >&2
+            exit 1
+          fi
+          echo "Extracted VERSION=$VERSION, TRIGGER_TAG=$TRIGGER_TAG, MATRIX_NAME=${MATRIX_NAME:-<none>}"
+
+          {
+            echo "VERSION_TAG=$VERSION_TAG"
+            echo "TRIGGER_TAG=$TRIGGER_TAG"
+            echo "MATRIX_NAME=$MATRIX_NAME"
+            echo "VERSION=$VERSION"
+            echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}"
+            echo "DOCKERHUB_REPO=${{ vars.DOCKERHUB_REPO }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Install yq
+        # yq lee el manifesto .github/matrices.yml. mikefarah/yq
+        # (la versión Go) parsea YAML correctamente. Pineamos a SHA
+        # para reproducibilidad y supply-chain.
         run: |
-          docker push "${{ env.IMAGE_TAG }}"
+          YQ_VERSION="v4.40.5"
+          YQ_SHA="8847f57d1852d81ada5c4c54f842277f876eb1c5d4015cd06c4b96506d10d067"
+          curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" \
+              -o /usr/local/bin/yq
+          echo "${YQ_SHA}  /usr/local/bin/yq" | sha256sum -c -
+          chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Build matrix plan from manifesto
+        # Genera un TSV con una línea por imagen a publicar:
+        #   MATRIX_NAME<TAB>NODE<TAB>BUN<TAB>FNM<TAB>NPM<TAB>STATUS<TAB>TAG<TAB>DESCRIPTION
+        # Si MATRIX_NAME estaba pre-fijado en Resolve tag name (caso
+        # matrix), se filtra el manifesto a solo esa entrada.
+        # Las entradas con status: deprecated se loggean y omiten
+        # en el caso trigger (en el caso matrix se respetan porque el
+        # usuario pidió explícitamente esa).
+        run: |
+          set -euo pipefail
+          PLAN_FILE="/tmp/matrix-plan.tsv"
+          : > "$PLAN_FILE"
+
+          # Validar el manifesto antes de iterarlo. Falla loud si
+          # falta la clave matrices — antes (con Dockerfile multi-branch)
+          # el error aparecía solo en el build step.
+          yq eval-all 'select(.matrices == null) | error("matrices key missing or empty")' \
+              .github/matrices.yml > /dev/null
+
+          # Si MATRIX_NAME viene pre-fijado (caso matrix), filtrar
+          # el manifesto a solo esa entrada. Si está vacío (caso
+          # trigger), tomar todas las activas.
+          if [[ -n "${MATRIX_NAME:-}" ]]; then
+            FILTER=".matrices[] | select(.name == \"$MATRIX_NAME\")"
+          else
+            FILTER='.matrices[] | select(.status == "active")'
+          fi
+
+          COUNT=0
+          while IFS='|' read -r name status node bun fnm npm description; do
+            [[ -z "$name" ]] && continue
+            if [[ "$status" != "active" && -z "${MATRIX_NAME:-}" ]]; then
+              # Caso trigger: ignoramos deprecated.
+              echo "::notice::Skipping deprecated matrix: $name ($description)"
+              continue
+            fi
+            TAG="${TRIGGER_TAG}_${name}"
+            echo -e "${name}\t${node}\t${bun}\t${fnm}\t${npm}\t${status}\t${TAG}\t${description}" >> "$PLAN_FILE"
+            COUNT=$((COUNT + 1))
+          done < <(yq eval "$FILTER" --output-format=json .github/matrices.yml \
+                   | jq -r '"\(.name)|\(.status)|\(.node)|\(.bun)|\(.fnm)|\(.npm)|\(.description)"')
+
+          if [[ "$COUNT" -eq 0 ]]; then
+            echo "Error: no matrices to publish. Manifest has no active entries (or the requested matrix '$MATRIX_NAME' doesn't exist)." >&2
+            exit 1
+          fi
+
+          echo "=== Build plan: $COUNT image(s) ==="
+          column -t -s $'\t' "$PLAN_FILE"
+
+          # Sanity: si el caso matrix pidió un nombre que no existe
+          # en el manifiesto, fail loud. Mejor aquí que en el build.
+          if [[ -n "${MATRIX_NAME:-}" ]] && ! grep -q "^${MATRIX_NAME}" "$PLAN_FILE"; then
+            echo "Error: matrix '$MATRIX_NAME' not found in .github/matrices.yml" >&2
+            echo "       Known matrices:" >&2
+            yq eval '.matrices[].name' .github/matrices.yml | sed 's/^/         /' >&2
+            exit 1
+          fi
+
+      - name: Build and push each image
+        # Por cada línea del plan: check si el tag ya existe en DockerHub,
+        # build con los --build-arg correctos, push.
+        id: build-images
+        run: |
+          set -euo pipefail
+          PLAN_FILE="/tmp/matrix-plan.tsv"
+          PUBLISHED=()
+          SKIPPED=()
+          FAILED=()
+
+          while IFS=$'\t' read -r name node bun fnm npm status tag description; do
+            [[ -z "$name" ]] && continue
+            echo ""
+            echo "============================================================"
+            echo "Building $tag (matrix: $name, status: $status)"
+            echo "  node=$node bun=$bun fnm=$fnm npm=$npm"
+            echo "  $description"
+            echo "============================================================"
+
+            # ¿Ya existe en DockerHub?
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/tags/${tag}/")
+            if [[ "$HTTP" == "200" ]]; then
+              echo "Tag $tag already exists on Docker Hub — skipping (no-op)."
+              SKIPPED+=("$tag")
+              continue
+            fi
+
+            # Build
+            if docker build \
+                --build-arg "VERSION=${VERSION}" \
+                --build-arg "NODE_DEFAULT_VERSION=${node}" \
+                --build-arg "BUN_VERSION=${bun}" \
+                --build-arg "FNM_VERSION=${fnm}" \
+                --build-arg "NPM_VERSION=${npm}" \
+                -t "${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${tag}" \
+                . ; then
+              echo "Build OK for $tag"
+            else
+              echo "::error::Build failed for $tag"
+              FAILED+=("$tag")
+              continue
+            fi
+
+            # Push
+            if docker push "${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${tag}" ; then
+              echo "Push OK for $tag"
+              PUBLISHED+=("$tag")
+            else
+              echo "::error::Push failed for $tag"
+              FAILED+=("$tag")
+              continue
+            fi
+          done < "$PLAN_FILE"
+
+          # Resumen final
+          echo ""
+          echo "============================================================"
+          echo "SUMMARY"
+          echo "============================================================"
+          echo "Published (${#PUBLISHED[@]}): ${PUBLISHED[*]:-<none>}"
+          echo "Skipped   (${#SKIPPED[@]}): ${SKIPPED[*]:-<none>}"
+          echo "Failed    (${#FAILED[@]}): ${FAILED[*]:-<none>}"
+          echo ""
+
+          if [[ ${#FAILED[@]} -gt 0 ]]; then
+            echo "::error::One or more images failed. See above."
+            exit 1
+          fi
 
       # El tag 'latest' no se publica desde este repo. VERSIONING.md explica
       # el rationale (reproducibilidad, cada consumidor fija su tag exacto).

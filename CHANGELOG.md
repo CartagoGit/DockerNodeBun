@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Dockerfile, wrapper, workflows, docs), separado de la **matriz de
   runtime** `n..._b...`. Esto permite saber si dos imágenes comparten
   correcciones solo mirando el tag, sin importar la matriz.
+- **Tag trigger + manifesto model**: el workflow publica N imágenes a
+  partir de UN SOLO tag `v{X.Y.Z}` en `main`, leyendo
+  `.github/matrices.yml` como única fuente de verdad sobre qué matrices
+  existen y qué versiones usan. Esto elimina la dependencia de ramas
+  paralelas (`n22.21.1_b1.3.14`, `n26.3.1_b1.3.14`) como fuente de
+  runtime — esas ramas se conservan por compatibilidad pero el workflow
+  ya no las lee. Añadir/quitar una matriz es un commit al manifiesto, sin
+  tocar el workflow.
 - **`ARG VERSION=1.0.1` added to Dockerfile** as single source of truth
   para `X.Y.Z`. Se inyecta como `--build-arg VERSION=X.Y.Z` desde
   `.github/workflows/docker-hub-update.yml` (que parsea el tag con
@@ -20,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docker inspect` muestre la versión de correcciones aplicada.
   Valor inicial elegido en `1.0.1` (saltándose `1.0.0`) para evitar
   colisión visual con los tags legacy `v1_*` del esquema 2.
+
+### Added
+- **`.github/matrices.yml`**: manifesto canónico de las matrices activas
+  (status: active) y deprecadas (status: deprecated). Es la única
+  fuente de verdad sobre qué imágenes publica el workflow. Añadir o
+  quitar una matriz es un commit a este archivo, sin tocar código.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
@@ -59,8 +73,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `v4.3.0`, `docker/login-action@v3` -> `v4.6.0`.
 - **Workflow dispatch**: `docker-hub-update.yml` ahora acepta un input
   `tag_name` para builds manuales, y valida que el tag matchee el
-  nuevo esquema `v{X.Y.Z}_n..._b...`.
-- **Workflow JSON serialization**: `update-dockerhub-description.yml`
+  nuevo esquema `v{X.Y.Z}_n..._b...`.- **Workflow rewrite (model "tag trigger + manifesto")**:
+  `docker-hub-update.yml` reescrito para leer `.github/matrices.yml`
+  y construir N imágenes a partir de un único tag `v{X.Y.Z}` en
+  `main`. Mantiene compatibilidad con tags matrix manuales
+  (`v{X.Y.Z}_n..._b...`) para re-publicar una sola imagen.
+  Idempotente: tags ya existentes en DockerHub se skipean sin re-build.- **Workflow JSON serialization**: `update-dockerhub-description.yml`
   ahora construye el payload con `jq --rawfile` + `--data-binary` en
   vez de embeber el JSON inline con `-d` (mas robusto ante
   caracteres especiales en el README).

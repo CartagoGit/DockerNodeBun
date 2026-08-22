@@ -23,19 +23,21 @@ build runner.
 - The zsh image provides `zsh`. Our `Dockerfile` adds `sudo`,
   `ca-certificates`, bun, fnm, node, and npm on top.
 
-## Current runtime matrix
+## Current runtime matrices
 
-The repository currently ships **two parallel runtime matrices**, each
-maintained on its own branch:
+The repository publishes images for the following runtime matrices,
+defined in [`.github/matrices.yml`](./.github/matrices.yml):
 
-| Branch | Node | Bun | npm | fnm | Status |
-|---|---|---|---|---|---|
-| `n26.3.1_b1.3.14` | `26.3.1` | `1.3.14` | `12.0.1` | `1.39.0` | Canonical matrix (futuro lx-app slice S3) |
-| `n22.21.1_b1.3.14` | `22.21.1` | `1.3.14` | `10.9.4` | `1.38.1` | LTS consumers (e.g. `logistics-app`) |
+| Matrix | Node | Bun | npm | fnm | Status | Use case |
+|---|---|---|---|---|---|---|
+| `n22.21.1_b1.3.14` | `22.21.1` | `1.3.14` | `10.9.4` | `1.38.1` | active | LTS consumers (e.g. `logistics-app`) |
+| `n26.3.1_b1.3.14` | `26.3.1` | `1.3.14` | `12.0.1` | `1.39.0` | active | Canonical matrix (future lx-app slice S3) |
 
-Both branches share the same wrapper fixes (exit code propagation,
-global-install detection, stderr logging). To consume either, pin the
-corresponding tag (e.g. `v1.0.1_n22.21.1_b1.3.14` or `v1.0.1_n26.3.1_b1.3.14`).
+All active matrices share the same wrapper fixes (exit code propagation,
+global-install detection, stderr logging) because the workflow builds
+them from the same `Dockerfile` at the same git tag. To consume a
+specific matrix, pin its exact tag (e.g.
+`v1.0.1_n22.21.1_b1.3.14` or `v1.0.1_n26.3.1_b1.3.14`).
 
 See [VERSIONING.md](./VERSIONING.md) for the tag-naming policy and
 how to add a new matrix.
@@ -45,7 +47,7 @@ how to add a new matrix.
 The canonical tag format is:
 
 ```text
-v{N}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
+v{X.Y.Z}_n{node MAJOR.MINOR.PATCH}_b{bun MAJOR.MINOR.PATCH}
 ```
 
 Examples:
@@ -55,11 +57,15 @@ Examples:
 
 Meaning:
 
-- `N` is a republish counter for the same runtime matrix.
-- If Node or Bun changes, the counter resets to `v1`.
-- If the runtime matrix stays the same but the image is republished
-    (workflow fix, packaging fix, container-contract fix, etc.), the counter
-    increases to `v2`, `v3`, and so on.
+- `X.Y.Z` is a semver-light counter of repo corrections (Dockerfile,
+  wrapper, workflows, docs). Published in parallel across all matrices.
+- `n..._b...` is the runtime matrix (node + bun versions).
+
+To publish a new set of images, push a single `v{X.Y.Z}` trigger tag in
+`main`. The workflow reads `.github/matrices.yml` and builds + pushes
+one image per active matrix. To publish a single matrix (e.g. to
+re-push after a transient failure), push `v{X.Y.Z}_{matrix-name}`
+directly.
 
 For the full policy, see [VERSIONING.md](./VERSIONING.md).
 
@@ -174,9 +180,15 @@ Publishing is split into two separate workflows.
 
 Workflow: [`.github/workflows/docker-hub-update.yml`](./.github/workflows/docker-hub-update.yml)
 
-- Trigger: push of a git tag matching `v*`
-- Behavior: builds and pushes only the exact tag that was pushed
-- Behavior: does not create or update `latest`
+- Trigger: push of a git tag matching `v*` (or `workflow_dispatch` with a `tag_name` input)
+- Behavior on `v{X.Y.Z}` (trigger tag): reads [`.github/matrices.yml`](./.github/matrices.yml) and
+  builds + pushes one image per active matrix, each tagged as `v{X.Y.Z}_{matrix-name}`.
+- Behavior on `v{X.Y.Z}_n..._b...` (matrix tag): builds + pushes only that specific image.
+- Behavior: does not create or update `latest`.
+- Idempotent: existing DockerHub tags are detected and skipped (no-op).
+
+The matrix list is the **single source of truth** — adding/removing a matrix is a commit to
+`.github/matrices.yml`, no code changes required.
 
 ### 2. Docker Hub description sync
 

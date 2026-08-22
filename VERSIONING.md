@@ -230,40 +230,97 @@ historia pero no la definen.
 
 ### Workflow de release (automatizado por GH Actions)
 
-El workflow `.github/workflows/docker-hub-update.yml`:
+El workflow `.github/workflows/docker-hub-update.yml` lee
+**`.github/matrices.yml`** como única fuente de verdad sobre qué
+imágenes se publican.
 
-1. Se dispara al pushear un tag `v*` o manualmente con input `tag_name`.
-2. Parsea el tag para extraer `X.Y.Z` con `sed`:
-   ```bash
-   VERSION=$(echo "$VERSION_TAG" | sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+)_.*/\1/')
-   ```
-3. Construye con `--build-arg VERSION="$VERSION"`.
-4. Pushea con el tag completo como IMAGE_TAG.
+El workflow distingue dos tipos de tag:
+
+1. **Tag trigger** — `v{X.Y.Z}` (sin sufijo de matriz). Al pushearlo,
+   el workflow itera el manifiesto y construye/pushea una imagen por
+   cada matriz con `status: active`. Cada imagen se etiqueta con
+   `v{X.Y.Z}_{nombre-matriz}`.
+
+2. **Tag matrix** — `v{X.Y.Z}_n..._b...` (con sufijo de matriz). Al
+   pushearlo, el workflow construye SOLO esa imagen. Útil para
+   re-publicar una matriz específica (ej. tag mal pusheado, fallo
+   de un build previo, hotfix de runtime).
+
+Cómo funciona internamente:
+
+```
+git tag v1.0.1 && git push origin v1.0.1
+  ↓
+workflow dispara
+  ↓
+parsea VERSION_TAG → VERSION=1.0.1, TRIGGER_TAG=v1.0.1, MATRIX_NAME=<none>
+  ↓
+lee .github/matrices.yml → para cada status:active:
+  nombre=n22.21.1_b1.3.14, node=22.21.1, bun=1.3.14, fnm=1.38.1, npm=10.9.4
+  nombre=n26.3.1_b1.3.14, node=26.3.1,  bun=1.3.14, fnm=1.39.0, npm=12.0.1
+  ↓
+para cada entrada del plan:
+  ¿tag ya existe en DockerHub? → skip (no-op, idempotente)
+  docker build --build-arg VERSION=1.0.1 \
+               --build-arg NODE_DEFAULT_VERSION=22.21.1 \
+               --build-arg BUN_VERSION=1.3.14 \
+               --build-arg FNM_VERSION=1.38.1 \
+               --build-arg NPM_VERSION=10.9.4 \
+               -t cartagodocker/nodebun:v1.0.1_n22.21.1_b1.3.14 .
+  docker push cartagodocker/nodebun:v1.0.1_n22.21.1_b1.3.14
+```
+
+El workflow es **idempotente**: si vuelves a pushear el mismo tag, los
+tags que ya existen en DockerHub se skipean sin re-build.
+
+### El manifesto `.github/matrices.yml`
+
+Es la **única fuente de verdad** sobre qué matrices existen y qué
+versiones usan. No mantener ramas paralelas como `n22.21.1_b1.3.14`
+para esto (las ramas históricas se conservan por compatibilidad pero
+el workflow ya no las lee).
+
+Cómo añadir una nueva matriz:
+
+1. Editar `.github/matrices.yml` y añadir la entrada con `status: active`.
+2. Commitear en `main`.
+3. Pushear el siguiente tag `v{X.Y.Z}` → la nueva matriz se construye.
+
+Cómo discontinuar una matriz:
+
+1. Cambiar `status: active` → `status: deprecated` en `.github/matrices.yml`.
+2. El workflow la construye una vez más (avisando con `::notice::`) y
+   luego la ignora cuando se pusheen tags futuros.
+3. Cuando sepas que nadie la consume, eliminarla del manifiesto.
+
+Cómo eliminar una matriz:
+
+1. Quitar la entrada de `.github/matrices.yml`.
+2. Commitear en `main`. Los tags ya publicados siguen disponibles en
+   DockerHub (este repo no borra imágenes).
 
 ### Release manual (mismo flujo, sin GH Actions)
 
-Cada vez que se publique un tag nuevo, se hace en este orden:
+Si necesitas construir imágenes localmente (sin tag trigger):
 
-1. **Editar el ARG VERSION del Dockerfile**:
+1. **Editar el `ARG VERSION` del Dockerfile**:
    ```bash
    # Cambiar:
    ARG VERSION=1.0.1
    # A:
    ARG VERSION=1.0.2
    ```
-2. **Commitear el bump + taggear en todas las matrices que apliquen**:
+2. **Pushear el tag trigger**:
    ```bash
    git add Dockerfile
-   git commit -m "chore: bump VERSION to 1.0.1"
-   # Para cada rama activa, merge main + tag con la misma X.Y.Z:
-   git checkout n22.21.1_b1.3.14
-   git merge --no-ff main -m "Merge main into n22.21.1_b1.3.14"
-   git tag v1.0.1_n22.21.1_b1.3.14
-   git push origin n22.21.1_b1.3.14 --tags
-   git checkout n26.3.1_b1.3.14
-   # ... mismo flujo ...
+   git commit -m "chore: bump VERSION to 1.0.2"
+   git tag v1.0.2
+   git push origin main v1.0.2
+   # El workflow construye las N imágenes en paralelo.
    ```
-3. **Actualizar `README.md`** y este `VERSIONING.md` si la política cambia.
+
+3. **Actualizar `README.md`** y este `VERSIONING.md` si la política
+   cambia.
 
 > No se publica **nunca** `latest` ni `stable` desde este repo: cada
 > consumidor debe fijar su tag exacto para tener builds reproducibles.
@@ -316,3 +373,5 @@ significado del segmento `v*`: pasó de "contador de republish" a
 | 2026-07-17 | Sin tags `latest`/`stable` | `x00065` |
 | 2026-08-22 | Adopción del canon `v{X.Y.Z}_n{node}_b{bun}` (semver ligero) | Discusión con mantenedor: contador `N` mezclaba dos dimensiones |
 | 2026-08-22 | `X.Y.Z` se publica en paralelo en todas las matrices | Permite comparar correcciones entre imágenes de distintos runtimes |
+| 2026-08-22 | Modelo "tag trigger + manifesto" (`.github/matrices.yml`) | El workflow itera el manifesto y publica una imagen por matriz activa. Elimina la dependencia de ramas paralelas como fuente de runtime. |
+| 2026-08-22 | `X.Y.Z` inicial = `1.0.1` (saltándose `1.0.0`) | Evita colisión visual con tags legacy `v1_*` del esquema 2 |
