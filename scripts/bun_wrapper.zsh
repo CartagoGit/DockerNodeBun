@@ -13,7 +13,13 @@ fi
 
 echo "Running bun_wrapper.sh script with parameters: $@"
 
+# Propagate the exit code from bun_original so callers can rely on `set -e`
+# and CI pipelines correctly detect failed builds (job marked failed when
+# bun fails). Previously the wrapper swallowed $?, making any bun failure
+# look like a 0 exit, which broke `set -e` in CI scripts and caused
+# "job succeeded without artifact" bugs.
 $BUN_HOME/bin/bun_original "$@"
+bun_original_exit=$?
 
 # Just users with root permissions or sudoers can give permissions to the bun share folder
 if [[ "$IS_ROOT_PRIV" == true ]]; then
@@ -33,3 +39,7 @@ if [[ "$IS_ROOT_PRIV" == true ]]; then
         chmod -R 777 ${BUN_HOME}
     fi
 fi
+
+# Exit with bun_original's code so callers (set -e, CI steps) see the
+# real status. Without this the wrapper always returns 0.
+exit "${bun_original_exit:-0}"
