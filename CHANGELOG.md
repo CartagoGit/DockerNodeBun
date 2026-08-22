@@ -45,10 +45,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Los breakpoints marcan roturas estructurales del repo (refactors
   mayores, cambios de contrato), ortogonales al versionado X.Y.Z.
   No pushea automáticamente — es decisión del mantenedor.
-- **Job `breakpoint-reminder`** en `docker-hub-update.yml`: emite
-  `::notice::` cuando se publica un tag trigger `v{X.Y.Z}` sin su
-  `breakpoint_v{X.Y.Z}` correspondiente. No crea el breakpoint
-  automáticamente — solo recuerda.
+
+### Removed
+- **Job `breakpoint-reminder`** eliminado del workflow
+  `docker-hub-update.yml`. Era un job CI que emitia un `::notice::`
+  cuando se publicaba un tag trigger `v{X.Y.Z}` sin su
+  `breakpoint_v{X.Y.Z}` correspondiente. Se decidio quitarlo porque:
+  anadia complejidad sin valor real (era solo un notice que el
+  mantenedor ya sabia leer), acoplaba el workflow a decisiones
+  humanas, y si fallaba el build nunca corria. El sistema de
+  breakpoints sigue existiendo (script + seccion en VERSIONING.md),
+  solo se quito el recordatorio automatico.
+
+### Changed (post-audit)
+- **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**.
+  v1.0.5 es la ultima estable del repo cartagodocker/zsh (publicada
+  2025-01-02). Trae mejoras del zsh image base sin tocar nuestro
+  Dockerfile (mismo Ubuntu 24.04, mismo helper `add_text_to_zshrc`
+  que seguimos usando). Mantenerse al dia con la base image es
+  importante: ademas de mejoras del zsh, incorpora parches de
+  seguridad del OS.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates

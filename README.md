@@ -211,10 +211,9 @@ git push origin v1.0.1 breakpoint_v1.0.1
 The script refuses to create a duplicate breakpoint tag (you'd have to delete and
 re-create if the version changes after the fact).
 
-A GitHub Actions job (`breakpoint-reminder` in `docker-hub-update.yml`) **does NOT**
-auto-create the breakpoint — that's a human decision. But it logs a `::notice::` in
-the workflow run when a trigger tag `vX.Y.Z` is published without a matching
-`breakpoint_vX.Y.Z`, so you don't forget.
+The CI workflow does not auto-create breakpoints and does not remind you to do so.
+The decision is fully human — when you tag a structural break, you decide whether
+it deserves a breakpoint tag.
 
 ### Listing breakpoints
 

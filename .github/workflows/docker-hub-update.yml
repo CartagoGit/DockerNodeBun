@@ -283,46 +283,14 @@ jobs:
       # El tag 'latest' no se publica desde este repo. VERSIONING.md explica
       # el rationale (reproducibilidad, cada consumidor fija su tag exacto).
 
-  # Job de recordatorio: cuando se publica un tag trigger v{X.Y.Z},
-  # avisa al mantenedor si debería crear también el tag
-  # breakpoint_v{X.Y.Z}. Es decisión humana: un breakpoint marca
-  # una rotura estructural del repo (refactor mayor, cambio de
-  # contrato, nueva arquitectura), no un bump rutinario.
-  #
-  # El job siempre termina en success (no bloquea el workflow); solo
-  # emite un ::notice:: si detecta que el breakpoint NO existe.
-  # El push del breakpoint tag es responsabilidad del mantenedor
-  # (ver scripts/tag-breakpoint.sh).
-  breakpoint-reminder:
-    # Desacoplado del job 'build' (sin `needs:`) para que se ejecute
-    # incluso si el build falla. Asi el mantenedor siempre ve el
-    # recordatorio de breakpoint, y ademas sirve como sanity check
-    # extra: si el workflow entero fallo, este job nos dice "el
-    # tag se recibio pero algo abajo fallo".
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref_type == 'tag'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          fetch-depth: 0
-          fetch-tags: true  # necesario para que git rev-parse vea los tags breakpoint_*
-
-      - name: Check for breakpoint tag
-        run: |
-          set -euo pipefail
-          VERSION_TAG="${GITHUB_REF#refs/tags/}"
-          # Solo aplica a tags trigger (vX.Y.Z sin sufijo de matriz)
-          if [[ ! "$VERSION_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "Tag $VERSION_TAG is a matrix tag, not a trigger — skipping breakpoint check."
-            exit 0
-          fi
-          BP_TAG="breakpoint_${VERSION_TAG}"
-          if git rev-parse --verify --quiet "refs/tags/${BP_TAG}" >/dev/null; then
-            echo "Breakpoint tag ${BP_TAG} exists at $(git rev-parse ${BP_TAG}^{commit})"
-          else
-            echo "::notice::Breakpoint tag ${BP_TAG} does NOT exist for this release."
-            echo "::notice::If ${VERSION_TAG} represents a structural break of how the repo works, create it with:"
-            echo "::notice::  scripts/tag-breakpoint.sh ${VERSION_TAG#v}"
-            echo "::notice::  git push origin ${VERSION_TAG} breakpoint_${VERSION_TAG}"
-          fi
+  # Nota: el job 'breakpoint-reminder' fue eliminado. Era un
+  # recordatorio CI para crear el tag breakpoint_v{X.Y.Z} despues
+  # de publicar v{X.Y.Z}. Se decidio quitarlo porque:
+  #   - Anadia complejidad al workflow sin valor real (era solo
+  #     un ::notice:: que el mantenedor ya sabe leer).
+  #   - Acoplaba el workflow a decisiones humanas.
+  #   - Si quieres saber si hay breakpoints, usa:
+  #       git tag -l 'breakpoint_*'
+  #     o documenta la lista en VERSIONING.md.
+  # El concepto de breakpoint sigue existiendo (tag-breakpoint.sh
+  # + seccion en VERSIONING.md), solo se quito el job de CI.

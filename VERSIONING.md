@@ -392,12 +392,10 @@ git show breakpoint_v1.0.1
 
 ### Recordatorio automático
 
-El job `breakpoint-reminder` en
-`.github/workflows/docker-hub-update.yml` emite un `::notice::` en
-el run del workflow cuando se publica un tag trigger `v{X.Y.Z}` sin
-su breakpoint correspondiente. **No crea** el breakpoint — esa es
-una decisión humana. Es solo un recordatorio para no olvidarlo en
-los releases estructurales.
+No hay. El sistema de breakpoints es **puramente humano**: si
+decides que un commit merece un breakpoint, corres el script y
+pusheas el tag. No hay recordatorio en CI ni validación automatica
+de que se haya creado.
 
 ---
 

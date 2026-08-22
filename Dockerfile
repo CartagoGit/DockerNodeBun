@@ -1,10 +1,10 @@
 # Base image: cartagodocker/zsh — Ubuntu 24.04 + zsh. Pinneada a un
 # tag concreto (no `latest`) para garantizar builds reproducibles.
 # Consultar https://hub.docker.com/r/cartagodocker/zsh/tags para tags
-# disponibles. Se elige un tag estable (no rc) compatible con esta
-# imagen. La base provee zsh; nosotros añadimos sudo, ca-certificates,
-# fnm, node, bun y npm.
-FROM cartagodocker/zsh:v1.0.2
+# disponibles. Se elige el ultimo tag estable (no rc) compatible
+# con esta imagen. La base provee zsh; nosotros añadimos sudo,
+# ca-certificates, fnm, node, bun y npm.
+FROM cartagodocker/zsh:v1.0.5
 USER root
 
 # Versions
