@@ -21,7 +21,7 @@ Tags are **exact**. There is no `latest` / `stable`. Pin the matrix you need.
 FROM cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 ```
 
-> Publish **zsh v2.0.0 to Hub first**. This tree pins `FROM cartagodocker/zsh:v2.0.0`. There is no `latest`. Do not build against Hub `zsh:v1.0.5`.
+> Pin **`cartagodocker/zsh:v2.0.0`**. There is no `latest`.
 
 ---
 
@@ -30,7 +30,7 @@ FROM cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 | | Piece | Notes |
 |---|---|---|
 | 🐧 | OS | Ubuntu 24.04 LTS — from [`cartagodocker/zsh`](https://hub.docker.com/r/cartagodocker/zsh) |
-| 📌 | zsh pin | **`cartagodocker/zsh:v2.0.0`** (publish zsh first, then this image) |
+| 📌 | zsh pin | **`cartagodocker/zsh:v2.0.0`** |
 | 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]`, **no ENTRYPOINT** (zsh 2.0.0) |
 | 💻 | Other shells | `bash` and `sh` (dash) — inherited |
 | 🟢 | Node / npm / bun / fnm | Installed at **build**; on `PATH` for every uid and every shell |

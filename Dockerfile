@@ -2,8 +2,7 @@
 # tag concreto (no `latest`) para garantizar builds reproducibles.
 # Consultar https://hub.docker.com/r/cartagodocker/zsh/tags para tags
 # disponibles. Esta version de NodeBun pinnea
-# cartagodocker/zsh:v2.0.0. Publicar zsh v2.0.0 a Hub ANTES de
-# construir/publicar NodeBun. zsh 2.0.0 aporta unzip, ca-certificates,
+# cartagodocker/zsh:v2.0.0. zsh 2.0.0 aporta unzip, ca-certificates,
 # sudo, dockerzsh y CMD sin ENTRYPOINT: NodeBun no los reinstala.
 FROM cartagodocker/zsh:v2.0.0
 USER root

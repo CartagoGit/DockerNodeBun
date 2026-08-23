@@ -8,8 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Base `cartagodocker/zsh:v2.0.0`.** Publicar zsh a Hub **antes**
-  de construir esta imagen. Hereda unzip, ca-certificates, sudo,
+- **Base `cartagodocker/zsh:v2.0.0`.** Hereda unzip, ca-certificates, sudo,
   SSH client, daily CLI extras, `dockerzsh` y `CMD` sin ENTRYPOINT.
   NodeBun **no** reinstala unzip ni certs (`libatomic1` sí: lo necesita bun).
   No añade Docker CLI ni un segundo kit de shell. Exige esa base
@@ -122,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (post-audit)
 - **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**
-  (tag NodeBun 2.0.0 publicado). Unreleased pinnea **zsh v2.0.0**.
+  (first NodeBun 2.0.0 Hub tags). This tree pins **zsh v2.0.0**.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
