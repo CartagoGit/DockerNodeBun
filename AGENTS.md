@@ -8,6 +8,31 @@ If it happens: **stop**, new chat, no retries, no glyph in tool args, no surroga
 
 Grep ASCII only (`os_icon`, `🐳`). Do not dump huge files into tool results.
 
+## Docker Hub long description (`README.md`)
+
+Hub `full_description` max is **~25 000 characters** (`wc -m README.md`).
+Over that, `Update Docker Hub Description` authenticates, then `PATCH`
+returns **HTTP 400** (`curl: (22)`). Hub keeps the last description that
+**succeeded**. Same trap as DockerZsh (zsh README already blew the cap).
+
+Workflow: `.github/workflows/update-dockerhub-description.yml`
+
+- Runs on `push` to **`main`** only if **`README.md`** or this
+  workflow file changed (`paths:`). A push that only touches
+  `scripts/` / Dockerfile / tags does **not** run it. Tag workflows
+  are image publish, not the Hub README.
+- Also `workflow_dispatch`.
+- Fail **before** PATCH if `wc -m README.md` is over 25000.
+
+When editing `README.md`: keep every fact (matrices, runtimes, helpers,
+pins). **Summarize** wording; do not delete inventory. Recheck `wc -m`.
+Do not dump the whole README into a tool result.
+
+Utilities tables are **two columns**: name → docs URL. Do not paste
+upstream descriptions. Image caveats stay in the intro. Inherited
+CLIs: link the zsh README Utilities. Our helpers link to Scripts /
+catalogue sections.
+
 ## Remaining work (nodebun)
 
 Tracker: `FIXES.md` — **No planned fixes.**

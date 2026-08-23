@@ -13,7 +13,8 @@ login zsh `su -` via `/etc/zsh/zprofile` sourcing `nodebun.sh`
 (`build.env` = this image's ARG), catalogue `dockernodebun`.
 Do not retag Hub zsh `v1.0.5`.
 
-**Publish (ops, not a tree bug):** git tag `v2.0.0` is not on the
-repo yet. Hub has no `v2.0.0_n22…` / `n26…` (404). Hub still has
-legacy `v1_n26…` and `v.1.x`. Push `v2.0.0` from `main` when you
-want Hub + GitHub Release. New builds do not need `--entrypoint`.
+**Publish (ops, not a tree bug):** git tag `v2.0.0` is on the repo.
+Hub `full_description` max ~25 000 chars (`wc -m README.md`). Over
+that, the description workflow authenticates then PATCH 400. Keep
+the inventory; summarize wording. See `AGENTS.md`. New builds do
+not need `--entrypoint`.

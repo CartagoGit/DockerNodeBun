@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive bash/sh inherit zsh `ls` → eza (and zoxide; bash fzf
   keys) from the parent image. No NodeBun change; rebuild on a zsh
   that includes `/usr/share/zsh-image/interactive.sh`.
+- README wording tightened (inventory unchanged). Utilities tables
+  are **name → docs URL**. Workflow fails before PATCH if
+  `wc -m README.md` is over 25000. A `main` push that does not
+  change `README.md` does not run the Hub description job.
 
 ## [2.0.0] - 2026-08-23
 
