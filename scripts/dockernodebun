@@ -18,9 +18,11 @@ comes from the zsh base and is not reinstalled here.
 Node, npm, bun and fnm are installed at **docker build**. They live on
 PATH (/usr/local/bin) for every uid and every shell — including Compose
 `command: ["tail", "-f", "/dev/null"]`. You do not need a TTY to run
-`node --version`. You **do** need an interactive zsh TTY for eza/bat/p10k:
+`node --version`. You **do** need an interactive TTY for eza aliases /
+p10k (zsh). Interactive bash/sh also alias `ls` → eza (no p10k):
 
   docker compose exec <svc> zsh
+  docker compose exec <svc> bash
 
 There is no ENTRYPOINT (zsh 2.0.0). `docker run IMAGE node --version`
 works. Pin the matrix tag; there is no `latest`.
@@ -437,8 +439,14 @@ fi
 shift
 if [ "$cmd" = "section" ]; then
   if [ $# -eq 0 ]; then
-    echo "dockernodebun: --section needs an id (try: dockernodebun --sections | -s)" >&2
-    exit 2
+    # Same as --sections / -s (list ids). With an id: print that section.
+    dockerzsh --sections
+    echo
+    echo "dockernodebun sections (this image):"
+    echo "  --helpers      NodeBun helpers (in-bash, only-in-container, …)"
+    echo "  --zsh-helpers  zsh image helpers (add_text_to_zshrc, …)"
+    nb_list_sections
+    exit 0
   fi
 else
   set -- "$cmd" "$@"

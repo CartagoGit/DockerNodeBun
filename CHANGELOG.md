@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Interactive bash/sh inherit zsh `ls` → eza (and zoxide; bash fzf
+  keys) from the parent image. No NodeBun change; rebuild on a zsh
+  that includes `/usr/share/zsh-image/interactive.sh`.
+
 ## [2.0.0] - 2026-08-23
 
 Pin **`FROM cartagodocker/zsh:v2.0.0`**. CMD without ENTRYPOINT.

@@ -54,7 +54,7 @@ sudo / `dockerzsh` / `add_text_to_*` come from **`cartagodocker/zsh:v2.0.0`**. T
 
 This page is the contract for people **using** the image.
 
-**From zsh (inherited, not reinstalled):** every extra CLI in the parent — [zsh README — Utilities](https://github.com/CartagoGit/DockerZsh#utilities). Same binaries, same aliases (`ls` → `eza` in interactive zsh). Inside this container: `dockerzsh --help` or `dockernodebun --listing`.
+**From zsh (inherited, not reinstalled):** every extra CLI in the parent — [zsh README — Utilities](https://github.com/CartagoGit/DockerZsh#utilities). Same binaries, same aliases (`ls` → `eza` in interactive zsh, bash, and sh). Inside this container: `dockerzsh --help` or `dockernodebun --listing`.
 
 **This image adds** the runtimes and helpers below. Upstream tools get a docs link. **Our** helpers (`in-bash`, `only-in-container`, …) are documented here — see [Scripts for child images](#scripts-for-child-images).
 
@@ -136,7 +136,7 @@ Node / bun / npm / fnm are **baked at `docker build`**. `docker run` does not do
 | bun | AVX2 + baseline zips; wrapper reads `/proc/cpuinfo` | `/usr/local/bin/bun` |
 | fnm | release zip | `/usr/local/bin/fnm` |
 
-zsh extras (prompt, `ls` → eza, `bat`) load from `~/.zshrc` and need a **TTY**. `node` / `npm` / `bun` do not.
+zsh extras (p10k prompt) load from `~/.zshrc` and need a **TTY**. Interactive bash/sh also get `ls` → eza (shared snippet). `node` / `npm` / `bun` do not need a TTY.
 
 ### 🖥️ Interactive prompt (eza, bat, p10k)
 
@@ -156,7 +156,7 @@ docker run --rm -it --user 1000:1000 -w /home/ubuntu \
 docker run --rm -it "$IMG"
 ```
 
-`ls` → eza with icons/colors. `bat` works. Powerlevel10k draws the prompt. `node`, `npm`, `bun` work in every shell. Inside zsh you can still `bash`, `sh`, `exit`.
+`ls` → eza with icons/colors. `bat` works. Powerlevel10k draws the prompt. `node`, `npm`, `bun` work in every shell. Inside zsh you can still `bash`, `sh`, `exit`. Interactive bash/sh also alias `ls` → eza; they do not get p10k.
 
 ### 🧊 Keep-alive (Compose)
 
