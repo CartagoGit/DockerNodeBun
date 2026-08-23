@@ -5,58 +5,472 @@ set -eu
 
 nodebun_extras() {
   cat <<'EOF'
+##id:nodebun
+========================================================================
+NodeBun extras (this image, on top of cartagodocker/zsh)
+========================================================================
 
-======== NodeBun extras (this image, on top of zsh) ========
+This command is the image catalogue. It is not `docker` on the host.
+`dockernodebun --help` prints the zsh catalogue first (exec dockerzsh),
+then this section. Everything above (eza, bat, ssh-from-host, sudo, …)
+comes from the zsh base and is not reinstalled here.
 
-Node, npm, bun and fnm are installed at docker build. They are on PATH
-for every uid and every shell (including Compose command: tail -f /dev/null).
-zsh extras (eza/bat/p10k) still need: docker compose exec <svc> zsh
+Node, npm, bun and fnm are installed at **docker build**. They live on
+PATH (/usr/local/bin) for every uid and every shell — including Compose
+`command: ["tail", "-f", "/dev/null"]`. You do not need a TTY to run
+`node --version`. You **do** need an interactive zsh TTY for eza/bat/p10k:
 
---- runtimes ---
-  node / npm / npx / corepack   Matrix Node (see NODE_DEFAULT_VERSION)
-  bun / bunx                    Bun (AVX2 or baseline wrapper)
-  fnm                           Fast Node Manager. Store: $FNM_DIR
-                                fnm install 20 && fnm use 20  (this shell only)
+  docker compose exec <svc> zsh
 
---- NodeBun helpers ---
-  in-bash                       bash --login (loads profile.d)
-  in-sh                         POSIX sh -l
-  only-in-container CMD         Run CMD only inside this container
-  skip-if-container CMD         Run CMD only on the host
-  dockernodebun                 This catalogue (includes dockerzsh above)
+There is no ENTRYPOINT (zsh 2.0.0). `docker run IMAGE node --version`
+works. Pin the matrix tag; there is no `latest`.
 
-Env: NODE_DEFAULT_VERSION  FNM_HOME FNM_DIR FNM_BIN  BUN_HOME BUN_INSTALL
-     IS_INTO_CONTAINER=true  VERSION (repo X.Y.Z)
+  dockernodebun                 Same as --help (zsh catalogue + extras)
+  dockernodebun --help | -h     This text
+  dockernodebun --version | -v  Image identity only (NODEBUN_IMAGE_VERSION)
+  dockernodebun --list | -l     Tool names (this image + zsh catalogue)
+  dockernodebun --list --version | -l -v
+                            Probe every catalogue tool now
+  dockernodebun runtimes --version | runtimes -v
+                            NodeBun runtimes (discovered from headings)
+  dockernodebun node --version | node -v
+                            One tool
+  dockernodebun --sections | -s zsh sections + NodeBun section ids
+  dockernodebun --runtimes      NodeBun section (also: dockernodebun runtimes)
+  dockernodebun --shells        Forwards to dockerzsh --shells
+  dockernodebun shells env      Mix zsh + NodeBun sections
 
-sudo-password / add_text_to_zshrc come from the zsh base (see above).
+  NodeBun section ids: nodebun runtimes helpers env
+  zsh section ids:     dockerzsh --sections  (or dockernodebun --sections)
+
+##id:runtimes
+========================================================================
+Runtimes
+========================================================================
+
+  node / npm / npx / corepack
+      Matrix Node (see NODE_DEFAULT_VERSION on the image tag and ENV).
+      Symlinked from the fnm store into /usr/local/bin at build, so any
+      uid and any shell sees them without `fnm use`. corepack is linked
+      when the Node install ships it (yarn/pnpm via corepack enable).
+
+      node --version
+      npm install
+      npx some-cli
+      corepack enable          # if you want yarn/pnpm shims
+
+  bun / bunx
+      Bun is baked at build. `/usr/local/bin/bun` is a bash wrapper
+      (`bun_wrapper.zsh` — bash shebang, historical .zsh name) that:
+        1. Picks AVX2 or baseline from /proc/cpuinfo (bun_original).
+        2. Wrapper chatter is STDERR only, and silent unless
+           BUN_WRAPPER_DEBUG=1 (stdout stays bun's).
+        3. Propagates bun's exit code (safe with set -e).
+        4. After `bun install -g` / `bun add -g` as root/sudo, chmod
+           777 on $BUN_HOME so other uids can use global bins.
+      bunx is an alias (`bun x`) in interactive zsh.
+
+      bun --version
+      bun install
+      bun run dev
+      bunx cowsay hello
+
+  fnm
+      Fast Node Manager. Store is global: FNM_DIR=/usr/share/fnm/store
+      (777, same idea as bun) — not /root/.local. Homes and /etc/skel
+      get ~/.local/share/fnm → that store. Interactive zsh runs
+      `eval "$(fnm env --shell zsh)"` then `fnm use $NODE_DEFAULT_VERSION`.
+      There is no --use-on-cd: a bind-mounted .nvmrc must not jump off
+      the matrix. `fnm use` is this shell only; a new shell is back on
+      the matrix Node in /usr/local/bin.
+
+      fnm ls
+      fnm install 20.19.0
+      fnm use 20.19.0          # this shell only
+
+##id:helpers
+========================================================================
+NodeBun helpers (this image — not Ubuntu packages)
+========================================================================
+
+Most people never type these. `bash pepe.sh` is enough. They exist so
+the **same** Makefile / script can run on the host and inside the
+container, and so zsh users can drop into bash/sh with login env.
+
+  in-bash [args…]
+      `bash --login` (loads /etc/profile.d/nodebun.sh). Use when a
+      snippet is not zsh-safe (set -o pipefail, [[ ]], bash arrays).
+      No args: interactive bash. With args: bash --login "$@".
+
+      in-bash
+      in-bash -c 'set -o pipefail; …'
+      in-bash script.sh
+
+  in-sh [args…]
+      POSIX `sh -l` (dash + login env). Same idea as in-bash for
+      portable snippets.
+
+      in-sh
+      in-sh -c 'case $1 in … esac'
+      in-sh script.sh
+
+  only-in-container [CMD…]
+      Run CMD only inside this container. Detects /.dockerenv or
+      IS_INTO_CONTAINER=true. No args: exit 0 if inside, 1 if not
+      (usable as a predicate). If outside and CMD was given: prints
+      an error and exits 1.
+
+      only-in-container                  # 0 inside, 1 on the host
+      only-in-container bun run test     # skip on the host
+
+  skip-if-container [CMD…]
+      No-op inside the container (exit 0); run CMD on the host.
+      Useful for host-only tools (adb, docker, osascript). No args
+      on the host: error (missing command).
+
+      skip-if-container adb start-server
+
+  dockernodebun
+      This catalogue (zsh catalogue first, then this section).
+
+sudo-password / sudo-nopasswd / add_text_to_zshrc / add_text_to_p10k /
+share_config_globally / ssh-from-host / git-from-host come from the
+zsh base (see the dockerzsh section above). NodeBun does not
+overwrite them when the base already ships sudo-password.
+
+##id:env
+========================================================================
+Environment
+========================================================================
+
+Login shells (`su -`, `bash -l`) drop Docker ENV. /etc/profile.d/nodebun.sh
+re-exports BUN_* / FNM_* / IS_INTO_CONTAINER (also sourced from
+bash.bashrc). It does **not** re-export PATH (FIXES N11): node / npm /
+npx / bun / fnm are already in /usr/local/bin, which login PATH keeps.
+
+  NODE_DEFAULT_VERSION   Matrix Node (tag n… part; Docker ENV + zshrc)
+  FNM_HOME               /usr/share/fnm
+  FNM_DIR                /usr/share/fnm/store  (global, 777)
+  FNM_BIN                /usr/share/fnm/bin
+  BUN_HOME / BUN_INSTALL /usr/share/bun
+  IS_INTO_CONTAINER      true  (used by only-in-container / skip-if-container)
+  VERSION                Child-overridable X.Y.Z (docker inspect)
+  NODEBUN_IMAGE_VERSION  This NodeBun tag (dockernodebun --version)
+  ZSH_IMAGE_VERSION      Parent zsh tag (dockerzsh --version)
+  SUDO_PASSWORD          Optional; applied on first shell (zsh base)
+
+Tag shape: v{X.Y.Z}_n{node}_b{bun}  e.g. v2.0.0_n26.3.1_b1.3.14
+X.Y.Z is repo corrections; n…_b… is the runtime matrix. No latest.
+
+libatomic1 is installed (bun needs it). unzip / ca-certificates / sudo
+come from cartagodocker/zsh:v2.0.0 and are not reinstalled here.
 EOF
 }
 
 version() {
-  echo "cartagodocker/nodebun  VERSION=${VERSION:-}  NODE=${NODE_DEFAULT_VERSION:-}"
-  command -v node >/dev/null && node --version || true
-  command -v npm >/dev/null && npm --version || true
-  command -v bun >/dev/null && bun --version || true
-  command -v fnm >/dev/null && fnm --version || true
+  # Image identity only. Tool versions: dockernodebun --list --version
+  echo "cartagodocker/nodebun  VERSION=${NODEBUN_IMAGE_VERSION:-${VERSION:-}}  NODE=${NODE_DEFAULT_VERSION:-}"
+  echo "cartagodocker/zsh      VERSION=${ZSH_IMAGE_VERSION:-}"
 }
 
-case "${1:-}" in
-  -v|--version)
-    version
-    ;;
-  -h|--help|"")
-    if command -v dockerzsh >/dev/null 2>&1; then
-      dockerzsh --help
-    else
-      echo "cartagodocker/nodebun (zsh catalogue not found; old zsh base?)"
-      echo "Install/upgrade cartagodocker/zsh for the full dockerzsh --help."
-      echo
+normalize_id() {
+  id=$(printf '%s' "$1" | tr 'A-Z' 'a-z')
+  while [ "${id#-}" != "$id" ]; do
+    id=${id#-}
+  done
+  case "$id" in
+    help|h) id=help ;;
+    version|v) id=version ;;
+    sections|s) id=sections ;;
+    section) id=section ;;
+    about-nodebun) id=nodebun ;;
+    runtime) id=runtimes ;;
+    helper|nbhelpers|predicates) id=helpers ;;
+    zsh-helpers|zshhelpers|image-helpers) id=zsh-helpers ;;
+    environment) id=env ;;
+    ls|view|viewing) id=listing ;;
+    list|l|tools) id=list ;;
+    data) id=edit ;;
+    archive) id=archives ;;
+    net) id=network ;;
+    process) id=system ;;
+    extra) id=extras ;;
+    font|locale|missing) id=fonts ;;
+    image) id=about ;;
+  esac
+  printf '%s' "$id"
+}
+
+is_nb_id() {
+  case "$1" in
+    nodebun|runtimes|helpers|env) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+nb_extract_tools() {
+  want=${1:-}
+  nodebun_extras | awk -v want="$want" '
+    BEGIN {
+      skip["nodebun"] = 1
+      skip["helpers"] = 1
+      skip["env"] = 1
+    }
+    /^##id:/ {
+      cur = substr($0, 6)
+      next
+    }
+    cur == "" { next }
+    cur in skip { next }
+    want != "" && cur != want { next }
+    /^  [A-Za-z0-9]/ {
+      line = $0
+      sub(/^  /, "", line)
+      gsub(/\([^)]*\)/, "", line)
+      n = split(line, parts, "/")
+      for (i = 1; i <= n; i++) {
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[i])
+        split(parts[i], w, /[[:space:]]+/)
+        cmd = w[1]
+        if (cmd ~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ && !seen[cmd]++) {
+          print cmd
+        }
+      }
+    }
+  '
+}
+
+nb_probe_cmd() {
+  _cmd=$1
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 1 "$_cmd" "$@" 2>&1 || true
+  else
+    "$_cmd" "$@" 2>&1 || true
+  fi
+}
+
+nb_print_tool_version() {
+  name=$1
+  if ! command -v "$name" >/dev/null 2>&1; then
+    printf '  %-14s  (not on PATH)\n' "$name"
+    return 0
+  fi
+  text=
+  for try in --version -V version; do
+    line=$(nb_probe_cmd "$name" "$try" | grep -v '^$' | head -n 1 | tr -d '\r')
+    case "$line" in
+      *[0-9]*)
+        text=$line
+        break
+        ;;
+    esac
+  done
+  if [ -z "$text" ]; then
+    bin=$(command -v "$name")
+    real=$(readlink -f "$bin" 2>/dev/null || printf '%s' "$bin")
+    pkg=$(dpkg-query -S "$real" 2>/dev/null | head -n 1 | cut -d: -f1)
+    if [ -n "$pkg" ]; then
+      ver=$(dpkg-query -W -f '${Version}' "$pkg" 2>/dev/null || true)
+      if [ -n "$ver" ]; then
+        text="$pkg ${ver}"
+      fi
     fi
-    nodebun_extras
-    ;;
-  *)
-    echo "dockernodebun: unknown option: $1" >&2
-    echo "Try: dockernodebun --help" >&2
+  fi
+  if [ -z "$text" ]; then
+    text='(no --version)'
+  fi
+  printf '  %-14s  %s\n' "$name" "$text"
+}
+
+nb_show_tool_versions() {
+  if [ $# -eq 0 ] || { [ $# -eq 1 ] && [ "$(normalize_id "$1")" = "list" ]; }; then
+    echo "nodebun:"
+    nb_extract_tools | while IFS= read -r n; do
+      nb_print_tool_version "$n"
+    done
+    echo
+    dockerzsh --list --version
+    return 0
+  fi
+  zsh_probe=
+  for raw in "$@"; do
+    id=$(normalize_id "$raw")
+    if [ "$id" = "list" ]; then
+      echo "nodebun:"
+      nb_extract_tools | while IFS= read -r n; do
+        nb_print_tool_version "$n"
+      done
+      echo
+      dockerzsh --list --version
+    elif is_nb_id "$id"; then
+      echo "${id}:"
+      nb_extract_tools "$id" | while IFS= read -r n; do
+        nb_print_tool_version "$n"
+      done
+    elif is_zsh_id "$id"; then
+      if [ "$id" = "zsh-helpers" ]; then
+        zsh_probe="${zsh_probe}${zsh_probe:+ }helpers"
+      else
+        zsh_probe="${zsh_probe}${zsh_probe:+ }${raw}"
+      fi
+    else
+      nb_print_tool_version "$raw"
+    fi
+  done
+  if [ -n "$zsh_probe" ]; then
+    # shellcheck disable=SC2086
+    dockerzsh $zsh_probe --version
+  fi
+}
+
+is_zsh_id() {
+  case "$1" in
+    about|usage|shells|listing|edit|archives|network|system|extras|fonts|zsh-helpers)
+      return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+strip_ids() {
+  grep -v '^##id:'
+}
+
+nb_list_sections() {
+  nodebun_extras | awk '
+    /^##id:/ { id = substr($0, 6); next }
+    id != "" && $0 != "" && $0 !~ /^=+$/ {
+      printf "  %-12s %s\n", id, $0
+      id = ""
+    }
+  '
+}
+
+nb_show_sections() {
+  want=
+  for raw in "$@"; do
+    id=$(normalize_id "$raw")
+    want="${want}${want:+ }${id}"
+  done
+  nodebun_extras | awk -v want="$want" '
+    BEGIN {
+      n = split(want, w, " ")
+      for (i = 1; i <= n; i++) ids[w[i]] = 1
+    }
+    /^##id:/ {
+      cur = substr($0, 6)
+      show = (cur in ids)
+      next
+    }
+    show { print }
+  '
+}
+
+full_help() {
+  dockerzsh --help
+  nodebun_extras | strip_ids
+}
+
+unknown_section() {
+  echo "dockernodebun: unknown section: $1" >&2
+  echo "Try: dockernodebun --sections | -s" >&2
+  echo "     dockernodebun --help | -h" >&2
+  echo "     dockernodebun --list --version | -l -v" >&2
+  exit 2
+}
+
+if [ $# -eq 0 ]; then
+  full_help
+  exit 0
+fi
+
+cmd=$(normalize_id "$1")
+if [ "$cmd" = "version" ]; then
+  version
+  exit 0
+fi
+if [ "$cmd" = "help" ]; then
+  full_help
+  exit 0
+fi
+if [ "$cmd" = "sections" ]; then
+  dockerzsh --sections
+  echo
+  echo "dockernodebun sections (this image):"
+  echo "  --helpers      NodeBun helpers (in-bash, only-in-container, …)"
+  echo "  --zsh-helpers  zsh image helpers (add_text_to_zshrc, …)"
+  nb_list_sections
+  exit 0
+fi
+
+want_tool_ver=0
+filtered=
+for raw in "$@"; do
+  nid=$(normalize_id "$raw")
+  if [ "$nid" = "version" ]; then
+    want_tool_ver=1
+  else
+    filtered="${filtered}${filtered:+ }${raw}"
+  fi
+done
+
+if [ "$want_tool_ver" = 1 ]; then
+  # shellcheck disable=SC2086
+  set -- $filtered
+  nb_show_tool_versions "$@"
+  exit 0
+fi
+
+if [ "$cmd" = "list" ]; then
+  echo "nodebun:"
+  nb_extract_tools
+  echo
+  dockerzsh --list
+  exit 0
+fi
+
+shift
+if [ "$cmd" = "section" ]; then
+  if [ $# -eq 0 ]; then
+    echo "dockernodebun: --section needs an id (try: dockernodebun --sections | -s)" >&2
     exit 2
-    ;;
-esac
+  fi
+else
+  set -- "$cmd" "$@"
+fi
+
+nb_ids=
+zsh_ids=
+zsh_raw=
+for raw in "$@"; do
+  id=$(normalize_id "$raw")
+  if is_nb_id "$id"; then
+    nb_ids="${nb_ids}${nb_ids:+ }${raw}"
+  elif is_zsh_id "$id"; then
+    # helpers on THIS cli is NodeBun. zsh image helpers:
+    #   dockerzsh --helpers   or   dockernodebun --zsh-helpers
+    if [ "$id" = "zsh-helpers" ]; then
+      zsh_ids="${zsh_ids}${zsh_ids:+ }helpers"
+      zsh_raw="${zsh_raw}${zsh_raw:+ }helpers"
+    else
+      zsh_ids="${zsh_ids}${zsh_ids:+ }${id}"
+      zsh_raw="${zsh_raw}${zsh_raw:+ }${raw}"
+    fi
+  else
+    unknown_section "$raw"
+  fi
+done
+
+first=1
+if [ -n "$zsh_raw" ]; then
+  # shellcheck disable=SC2086
+  dockerzsh $zsh_raw
+  first=0
+fi
+if [ -n "$nb_ids" ]; then
+  if [ "$first" -eq 0 ]; then
+    echo
+  fi
+  # shellcheck disable=SC2086
+  nb_show_sections $nb_ids
+fi

@@ -10,6 +10,14 @@ export FNM_HOME="${FNM_HOME:-/usr/share/fnm}"
 export FNM_DIR="${FNM_DIR:-${FNM_HOME}/store}"
 export FNM_BIN="${FNM_BIN:-${FNM_HOME}/bin}"
 export IS_INTO_CONTAINER="${IS_INTO_CONTAINER:-true}"
+# Keep the NodeBun tag if a child overwrote VERSION (login shells drop Docker ENV).
+if [ -n "${NODEBUN_IMAGE_VERSION:-}" ]; then
+  export NODEBUN_IMAGE_VERSION
+fi
+
+# PATH is not re-exported on purpose. node / npm / npx / bun / fnm live
+# in /usr/local/bin, which Ubuntu login PATH already keeps. Docker ENV
+# PATH is dropped by `su -` / `bash -l`; those binaries still resolve.
 
 # Optional: docker run -e SUDO_PASSWORD=... → require that password.
 # No-op when unset. Safe to source on every shell (flag in /run).

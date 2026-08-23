@@ -8,18 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Base `cartagodocker/zsh:v1.0.6`.** Publicar zsh a Hub **antes**
-  de construir esta imagen. Hereda unzip, ca-certificates, sudo y
-  `CMD` sin ENTRYPOINT. NodeBun **no** reinstala unzip ni certs
-  (`libatomic1` sí: lo necesita bun).
-- **No pisa sudo de zsh.** `COPY` solo helpers NodeBun
+- **Base `cartagodocker/zsh:v2.0.0`.** Publicar zsh a Hub **antes**
+  de construir esta imagen. Hereda unzip, ca-certificates, sudo,
+  SSH client, daily CLI extras, `dockerzsh` y `CMD` sin ENTRYPOINT.
+  NodeBun **no** reinstala unzip ni certs (`libatomic1` sí: lo necesita bun).
+  No añade Docker CLI ni un segundo kit de shell. Exige esa base
+  (build falla si faltan `sudo-password` / `container-nopasswd` / `dockerzsh`).
+- **Sin fallback sudo.** `COPY` solo helpers NodeBun
   (`bun_wrapper`, `in-bash`, `in-sh`, `only-in-container`,
   `skip-if-container`, `nodebun-profile.sh`, `dockernodebun`).
-  Los 4 scripts sudo van a `/usr/local/share/nodebun-sudo-fallback/`
-  y solo se instalan en PATH si la base no trae `sudo-password`.
+  Scripts `sudo-*` de este repo **borrados**.
 - **zshrc:** no se duplica `apply-sudo-password-on-boot.sh` si la
   base ya lo puso en `/usr/share/globally/.zshrc`.
-- **`dockernodebun --help`:** prints `dockerzsh --help` then NodeBun extras.
+- **`dockernodebun --help`:** prints `dockerzsh --help` then extras.
+  `--version | -v` is image identity. Tool versions:
+  `dockernodebun --list --version | -l -v`, `runtimes -v`, `node -v`
+  (headings discovered, not hardcoded).
+- **`bun_wrapper`:** silent unless `BUN_WRAPPER_DEBUG=1`. Shebang is
+  bash (historical `.zsh` filename). Documented in README / wrapper header.
+- **Build `bun --version`:** fails the image if bun does not start
+  (`test -x bun_avx2` / `bun_baseline` then `bun --version` without `|| warn`).
+- **`NODEBUN_IMAGE_VERSION`:** same idea as zsh `ZSH_IMAGE_VERSION`. A
+  child `FROM nodebun` that sets `VERSION` does not make
+  `dockernodebun --version` lie.
+
+### Fixed
+- CHANGELOG 2.0.0 said a redundant `fnm use` was removed. That was
+  wrong: `fnm use ${NODE_DEFAULT_VERSION}` stays in the Dockerfile RUN
+  (so `npm install -g` sees the matrix Node) **and** in `.zshrc`
+  (so interactive zsh activates that Node). Do not drop it.
 
 ## [2.0.0] - 2026-08-23
 
@@ -105,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (post-audit)
 - **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**
-  (tag NodeBun 2.0.0 publicado). Unreleased pinnea **zsh v1.0.6**.
+  (tag NodeBun 2.0.0 publicado). Unreleased pinnea **zsh v2.0.0**.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
@@ -123,14 +140,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Giving permissions ...` messages moved from stdout to stderr. Previously
   they contaminated the output of any caller that piped or parsed
   `bun ...` stdout, breaking CI log filters and downstream parsers.
-- **Dockerfile `bun --version` no longer aborts build**: the sanity check
-  uses `|| echo "[warn] ..."` so a transient bun failure does not block the
-  image build. The wrapper was already created and chmodded above; this only
-  confirms the wiring is intact.
+- **Dockerfile `bun --version` no longer aborts build** *(later reverted
+  in Unreleased: a broken bun must fail the image)*: the 2.0.0 Hub tags
+  used `|| echo "[warn] ..."`.
 - **Dockerfile base image pinned**: `FROM cartagodocker/zsh:latest` changed
   to `FROM cartagodocker/zsh:v1.0.2` for reproducible builds.
-- **Dockerfile redundant `fnm use` removed**: `fnm default ${NODE_DEFAULT_VERSION}`
-  already establishes the default; the following `fnm use` was a no-op.
+- **`fnm use` stays.** `fnm default` plus `fnm use ${NODE_DEFAULT_VERSION}`
+  in the RUN (npm global) and in `.zshrc` (interactive zsh). An older
+  changelog line that said this was a no-op was wrong.
 
 ### Changed (infra)
 - **`.dockerignore` populated**: previously empty, now excludes `.git`, `.github`,
