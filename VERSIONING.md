@@ -1,12 +1,8 @@
 # DockerNodeBun — Versionado canónico
 
-> Documento **canónico** del esquema de versionado a partir de la propuesta
-> [`x00065`](https://github.com/CartagoGit/logistics-app/blob/main/docs/mcp-vertex/proposals/ready/x00065-upgrade-runtime-to-node-26-with-aligned-nodebun-image.md)
-> del repo `logistics-app` (2026-07-17).
->
-> Este archivo es la **fuente de verdad** sobre cómo se versionan y publican
-> las imágenes de `cartagodocker/nodebun`. Cualquier consumidor que use
-> `FROM cartagodocker/nodebun:<tag>` debe entender este esquema.
+> Fuente de verdad de cómo se versionan y publican las imágenes
+> `cartagodocker/nodebun`. Cualquier `FROM cartagodocker/nodebun:<tag>`
+> debe seguir este esquema.
 
 ---
 
@@ -66,23 +62,23 @@ El nuevo esquema separa las dos dimensiones:
 - `v2.0.0_n22.21.1_b1.3.14` y `v2.0.0_n26.3.1_b1.3.14` tienen
   **exactamente las mismas correcciones aplicadas al repo** pero
   distintos runtimes.
-- `v2.0.0_n22.21.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` tienen el
+- `v2.0.0_n22.21.1_b1.3.14` y `v2.0.1_n22.21.1_b1.3.14` tienen el
   mismo runtime pero distintas correcciones del wrapper/Dockerfile.
-- `v2.0.0_n26.3.1_b1.3.14` y `v1.0.2_n22.21.1_b1.3.14` difieren
+- `v2.0.0_n26.3.1_b1.3.14` y `v2.0.1_n22.21.1_b1.3.14` difieren
   en ambos ejes — son imágenes completamente distintas.
 
 ### Ejemplos
 
 | Tag | Significado |
 |---|---|
-| `v2.0.0_n22.21.1_b1.3.14` | Primer release del repo, matriz Node 22 LTS |
+| `v2.0.0_n22.21.1_b1.3.14` | Release 2.0.0, matriz Node 22 LTS |
 | `v2.0.0_n26.3.1_b1.3.14` | Mismo release, matriz Node 26 |
-| `v1.0.2_n22.21.1_b1.3.14` | Bugfix del wrapper, matriz Node 22 |
-| `v1.0.2_n26.3.1_b1.3.14` | Mismo bugfix del wrapper, matriz Node 26 |
-| `v1.1.0_n22.21.1_b1.3.14` | Feature nuevo (ej. nuevo binario en PATH), matriz Node 22 |
-| `v2.0.0_n22.21.1_b1.3.14` | Cambio incompatible (ej. drop de Node 18 si se anade), matriz Node 22 |
-| `v2.0.0_n28.0.0_b1.5.0` | Cuando salga Node 28 + bun 1.5 — X.Y.Z se mantiene en `v2.0.0` |
-| `v2.0.0_n26.3.1_b1.4.0` | Bump de bun a 1.4 — X.Y.Z se mantiene en `v2.0.0` |
+| `v2.0.1_n22.21.1_b1.3.14` | Bugfix del wrapper, matriz Node 22 |
+| `v2.0.1_n26.3.1_b1.3.14` | Mismo bugfix, matriz Node 26 |
+| `v2.1.0_n22.21.1_b1.3.14` | Feature compatible (ej. nuevo binario en PATH) |
+| `v3.0.0_n22.21.1_b1.3.14` | Cambio incompatible (ej. drop de runtime / otra base) |
+| `v2.0.0_n28.0.0_b1.5.0` | Nuevo runtime; X.Y.Z se mantiene si el repo no cambia |
+| `v2.0.0_n26.3.1_b1.4.0` | Bump de bun; X.Y.Z se mantiene si el repo no cambia |
 
 ### Comandos utiles
 
@@ -201,8 +197,8 @@ Bumpear cuando cambia node, bun, fnm o npm:
   sufijo `n..._b...` igual. Ej: `v2.0.0_n22.21.1_b1.3.14` →
   `v1.0.2_n22.21.1_b1.3.14`.
 - Cambio de runtime Y de correcciones → ambos suben.
-- Cambio de major de node o bun → `X` se mantiene en `1`, sufijo cambia.
-  Ej: `v2.0.0_n22.21.1_b1.3.14` → `v2.0.0_n28.0.0_b1.5.0`.
+- Cambio de major de node o bun → `X` se mantiene si el contrato del
+  repo no cambia. Ej: `v2.0.0_n22.21.1_b1.3.14` → `v2.0.0_n28.0.0_b1.5.0`.
 
 ### Política para consumidores
 
@@ -220,7 +216,7 @@ Bumpear cuando cambia node, bun, fnm o npm:
 `X.Y.Z` se declara como `ARG VERSION` en el `Dockerfile`:
 
 ```dockerfile
-ARG VERSION=1.0.1
+ARG VERSION=2.0.0
 ```
 
 Y se exporta como `ENV VERSION=${VERSION}` para que `docker inspect`
@@ -253,7 +249,7 @@ git tag v2.0.0 && git push origin v2.0.0
   ↓
 workflow dispara
   ↓
-parsea VERSION_TAG → VERSION=1.0.1, TRIGGER_TAG=v2.0.0, MATRIX_NAME=<none>
+parsea VERSION_TAG → VERSION=2.0.0, TRIGGER_TAG=v2.0.0, MATRIX_NAME=<none>
   ↓
 lee .github/matrices.yml → para cada status:active:
   nombre=n22.21.1_b1.3.14, node=22.21.1, bun=1.3.14, fnm=1.38.1, npm=10.9.4
@@ -261,7 +257,7 @@ lee .github/matrices.yml → para cada status:active:
   ↓
 para cada entrada del plan:
   ¿tag ya existe en DockerHub? → skip (no-op, idempotente)
-  docker build --build-arg VERSION=1.0.1 \
+  docker build --build-arg VERSION=2.0.0 \
                --build-arg NODE_DEFAULT_VERSION=22.21.1 \
                --build-arg BUN_VERSION=1.3.14 \
                --build-arg FNM_VERSION=1.38.1 \
@@ -306,16 +302,16 @@ Si necesitas construir imágenes localmente (sin tag trigger):
 1. **Editar el `ARG VERSION` del Dockerfile**:
    ```bash
    # Cambiar:
-   ARG VERSION=1.0.1
+   ARG VERSION=2.0.0
    # A:
-   ARG VERSION=1.0.2
+   ARG VERSION=2.0.1
    ```
 2. **Pushear el tag trigger**:
    ```bash
    git add Dockerfile
-   git commit -m "chore: bump VERSION to 1.0.2"
-   git tag v1.0.2
-   git push origin main v1.0.2
+   git commit -m "chore: bump VERSION to 2.0.1"
+   git tag v2.0.1
+   git push origin main v2.0.1
    # El workflow construye las N imágenes en paralelo.
    ```
 
@@ -366,11 +362,8 @@ deben migrar a:
 FROM cartagodocker/nodebun:v1_n<SU-NODE>_b<SU-BUN>
 ```
 
-El consumidor canónico de este repo es
-[`logistics-app/tools/docker/Dockerfile`](https://github.com/CartagoGit/logistics-app).
-La migración se trackea en la propuesta
-[`x00065`](https://github.com/CartagoGit/logistics-app/blob/main/docs/mcp-vertex/proposals/ready/x00065-upgrade-runtime-to-node-26-with-aligned-nodebun-image.md),
-slice **S3**.
+Los consumidores deben pinnear el tag exacto de la matriz que necesitan
+(`v{X.Y.Z}_n…_b…`), no `latest`.
 
 ---
 

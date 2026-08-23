@@ -50,7 +50,7 @@ matrices:
     bun: 1.3.14
     fnm: 1.38.1
     npm: 10.9.4
-    description: "LTS consumers (e.g. logistics-app)"
+    description: "Node 22 LTS"
 
   - name: n26.3.1_b1.3.14
     status: active
@@ -58,4 +58,4 @@ matrices:
     bun: 1.3.14
     fnm: 1.39.0
     npm: 12.0.1
-    description: "Canonical matrix (future lx-app slice S3)"
+    description: "Node 26 LTS"

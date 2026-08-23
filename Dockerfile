@@ -1,15 +1,14 @@
 # Base image: cartagodocker/zsh — Ubuntu 24.04 + zsh. Pinneada a un
 # tag concreto (no `latest`) para garantizar builds reproducibles.
 # Consultar https://hub.docker.com/r/cartagodocker/zsh/tags para tags
-# disponibles. Se elige el ultimo tag estable (no rc) compatible
-# con esta imagen. La base provee zsh; nosotros añadimos sudo,
-# ca-certificates, fnm, node, bun y npm.
-FROM cartagodocker/zsh:v1.0.5
+# disponibles. Esta version de NodeBun pinnea
+# cartagodocker/zsh:v1.0.6. Publicar zsh v1.0.6 a Hub ANTES de
+# construir/publicar NodeBun. zsh 1.0.6 aporta unzip, ca-certificates,
+# sudo y CMD sin ENTRYPOINT: NodeBun no los reinstala.
+FROM cartagodocker/zsh:v1.0.6
 USER root
-# La imagen zsh define SHELL ["zsh", "-c"]. Un RUN largo con quotes,
-# $(...) y && se parte o se traga errores (fnm env invalido -> eval vacio
-# -> el resto no corre y Docker igual marca el layer OK). Los RUN de
-# instalacion van en POSIX sh.
+# zsh >= 1.0.6 already uses SHELL ["/bin/sh", "-c"]. Keep it explicit
+# so RUN with quotes / $(...) is POSIX even on an older base.
 SHELL ["/bin/sh", "-c"]
 
 # Versions
@@ -52,9 +51,25 @@ ARG BUN_DOWNLOAD_URL_AVX2=https://github.com/oven-sh/bun/releases/download/bun-v
 ARG BUN_DOWNLOAD_URL_BASELINE=https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64-baseline.zip
 ARG FNM_URL=https://github.com/Schniz/fnm/releases/download/v${FNM_VERSION}/fnm-linux.zip
 
-COPY ./scripts ${BIN_HOME}
-# in-bash / in-sh / skip-if-container / only-in-container / bun_wrapper
-# se copian a /usr/local/bin. El profile de login va a /etc/profile.d.
+# Solo lo que NodeBun aporta. NO copiar sudo-password / sudo-nopasswd /
+# enable-sudo-users / apply-sudo-password-on-boot encima de /usr/local/bin:
+# un zsh nuevo ya los tiene (drop-in container-nopasswd). COPY de todo
+# scripts/ los pisaria y romperia sudo-password (nombres nodebun vs container).
+COPY scripts/bun_wrapper.zsh \
+     scripts/in-bash \
+     scripts/in-sh \
+     scripts/only-in-container \
+     scripts/skip-if-container \
+     scripts/nodebun-profile.sh \
+     scripts/dockernodebun \
+     ${BIN_HOME}/
+# Fallback sudo por si alguien construye contra una zsh vieja (v1.0.5).
+# Con FROM v1.0.6+ no se copia a PATH (el RUN lo detecta).
+COPY scripts/sudo-password \
+     scripts/sudo-nopasswd \
+     scripts/enable-sudo-users.sh \
+     scripts/apply-sudo-password-on-boot.sh \
+     /usr/local/share/nodebun-sudo-fallback/
 
 # Bloque ENV multilínea. Los comentarios van FUERA del bloque (antes
 # de ENV) para máxima portabilidad de parsers Docker: las líneas
@@ -81,10 +96,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
 #   2. node/npm/npx en /usr/local/bin -> cualquier uid/shell, sin fnm use.
 #   3. symlink ~/.local/share/fnm + /etc/skel -> usuarios nuevos.
 #   4. store 777 (como bun): cualquier uid puede instalar/cambiar Node.
+#   5. unzip + ca-certificates: los trae zsh 1.0.6. No reinstalar.
+#   6. sudo: si zsh ya dejo sudo-password + container-nopasswd, no pisar.
+#      Fallback solo si alguien construye contra una base zsh vieja.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip ca-certificates libatomic1 sudo \
-    && chmod +x ${BIN_HOME}/enable-sudo-users.sh \
-    && ${BIN_HOME}/enable-sudo-users.sh \
+    libatomic1 \
+    && if [ -x ${BIN_HOME}/sudo-password ] && { [ -f /etc/sudoers.d/container-nopasswd ] || [ -f /etc/sudoers.d/nodebun ]; }; then \
+         echo "[nodebun] sudo already provided by zsh base; not overwriting"; \
+       else \
+         apt-get install -y --no-install-recommends sudo \
+         && cp -a /usr/local/share/nodebun-sudo-fallback/. ${BIN_HOME}/ \
+         && chmod +x ${BIN_HOME}/sudo-password ${BIN_HOME}/sudo-nopasswd \
+                       ${BIN_HOME}/apply-sudo-password-on-boot.sh ${BIN_HOME}/enable-sudo-users.sh \
+         && ${BIN_HOME}/enable-sudo-users.sh; \
+       fi \
     && curl -fsSL ${FNM_URL} -o /tmp/fnm.zip \
     && mkdir -p ${FNM_BIN} ${FNM_DIR} \
     && unzip /tmp/fnm.zip -d ${FNM_BIN} \
@@ -121,7 +146,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     && ln -sfn ${BUN_BIN}/bun ${NODE_BIN}/bun \
     && chmod +x ${BIN_HOME}/in-bash ${BIN_HOME}/in-sh ${BIN_HOME}/skip-if-container ${BIN_HOME}/only-in-container \
-    && chmod +x ${BIN_HOME}/sudo-password ${BIN_HOME}/sudo-nopasswd ${BIN_HOME}/apply-sudo-password-on-boot.sh ${BIN_HOME}/enable-sudo-users.sh \
+    && chmod +x ${BIN_HOME}/bun_wrapper.zsh ${BIN_HOME}/dockernodebun \
     && install -m 0644 ${BIN_HOME}/nodebun-profile.sh /etc/profile.d/nodebun.sh \
     && if [ -f /etc/bash.bashrc ]; then printf '\n# nodebun login/non-login bash\n. /etc/profile.d/nodebun.sh\n' >> /etc/bash.bashrc; fi \
     && chmod -R 777 ${BUN_HOME} \
@@ -141,9 +166,11 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'eval "$(fnm env --shell zsh)"' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
     'alias bunx="bun x"' \
-    '[ -x /usr/local/bin/apply-sudo-password-on-boot.sh ] && /usr/local/bin/apply-sudo-password-on-boot.sh || true' \
-    )"
+    )" \
+    && if ! grep -q apply-sudo-password-on-boot /usr/share/globally/.zshrc 2>/dev/null; then \
+         add_text_to_zshrc '[ -x /usr/local/bin/apply-sudo-password-on-boot.sh ] && /usr/local/bin/apply-sudo-password-on-boot.sh || true'; \
+       fi
 
 # USER del Dockerfile se queda en root. Consumidores no-root
-# (lx-app compose: user: 1000:1000) lo pisan. Node/fnm no
+# (compose: user: 1000:1000) lo pisan. Node/fnm no
 # dependen del HOME: FNM_DIR es global y node esta en /usr/local/bin.

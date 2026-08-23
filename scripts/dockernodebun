@@ -1,0 +1,62 @@
+#!/bin/sh
+# Catalogue of cartagodocker/nodebun. Prints the zsh catalogue first
+# (exec dockerzsh — do not copy it), then this image's extras.
+set -eu
+
+nodebun_extras() {
+  cat <<'EOF'
+
+======== NodeBun extras (this image, on top of zsh) ========
+
+Node, npm, bun and fnm are installed at docker build. They are on PATH
+for every uid and every shell (including Compose command: tail -f /dev/null).
+zsh extras (eza/bat/p10k) still need: docker compose exec <svc> zsh
+
+--- runtimes ---
+  node / npm / npx / corepack   Matrix Node (see NODE_DEFAULT_VERSION)
+  bun / bunx                    Bun (AVX2 or baseline wrapper)
+  fnm                           Fast Node Manager. Store: $FNM_DIR
+                                fnm install 20 && fnm use 20  (this shell only)
+
+--- NodeBun helpers ---
+  in-bash                       bash --login (loads profile.d)
+  in-sh                         POSIX sh -l
+  only-in-container CMD         Run CMD only inside this container
+  skip-if-container CMD         Run CMD only on the host
+  dockernodebun                 This catalogue (includes dockerzsh above)
+
+Env: NODE_DEFAULT_VERSION  FNM_HOME FNM_DIR FNM_BIN  BUN_HOME BUN_INSTALL
+     IS_INTO_CONTAINER=true  VERSION (repo X.Y.Z)
+
+sudo-password / add_text_to_zshrc come from the zsh base (see above).
+EOF
+}
+
+version() {
+  echo "cartagodocker/nodebun  VERSION=${VERSION:-}  NODE=${NODE_DEFAULT_VERSION:-}"
+  command -v node >/dev/null && node --version || true
+  command -v npm >/dev/null && npm --version || true
+  command -v bun >/dev/null && bun --version || true
+  command -v fnm >/dev/null && fnm --version || true
+}
+
+case "${1:-}" in
+  -v|--version)
+    version
+    ;;
+  -h|--help|"")
+    if command -v dockerzsh >/dev/null 2>&1; then
+      dockerzsh --help
+    else
+      echo "cartagodocker/nodebun (zsh catalogue not found; old zsh base?)"
+      echo "Install/upgrade cartagodocker/zsh for the full dockerzsh --help."
+      echo
+    fi
+    nodebun_extras
+    ;;
+  *)
+    echo "dockernodebun: unknown option: $1" >&2
+    echo "Try: dockernodebun --help" >&2
+    exit 2
+    ;;
+esac

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Base `cartagodocker/zsh:v1.0.6`.** Publicar zsh a Hub **antes**
+  de construir esta imagen. Hereda unzip, ca-certificates, sudo y
+  `CMD` sin ENTRYPOINT. NodeBun **no** reinstala unzip ni certs
+  (`libatomic1` sí: lo necesita bun).
+- **No pisa sudo de zsh.** `COPY` solo helpers NodeBun
+  (`bun_wrapper`, `in-bash`, `in-sh`, `only-in-container`,
+  `skip-if-container`, `nodebun-profile.sh`, `dockernodebun`).
+  Los 4 scripts sudo van a `/usr/local/share/nodebun-sudo-fallback/`
+  y solo se instalan en PATH si la base no trae `sudo-password`.
+- **zshrc:** no se duplica `apply-sudo-password-on-boot.sh` si la
+  base ya lo puso en `/usr/share/globally/.zshrc`.
+- **`dockernodebun --help`:** prints `dockerzsh --help` then NodeBun extras.
+
 ## [2.0.0] - 2026-08-23
 
 ### Added
@@ -30,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Node visible para cualquier uid**. `v2.0.0` instalaba Node en
   `/root/.local/share/fnm` y el `.zshrc` global hacia
   `eval $(fnm env); fnm use ${NODE_DEFAULT_VERSION}`. Compose con
-  `user: 1000:1000` (lx-app) arrancaba zsh interactivo y fnm pedia
+  `user: 1000:1000` arrancaba zsh interactivo y fnm pedia
   instalar 22.21.1 porque el store de ubuntu estaba vacio.
   Contrato (sigue `2.0.0`, se republica el tag):
   - `FNM_DIR=/usr/share/fnm/store` (store global, no per-home).
@@ -90,13 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   en el propio tag.
 
 ### Changed (post-audit)
-- **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**.
-  v1.0.5 es la ultima estable del repo cartagodocker/zsh (publicada
-  2025-01-02). Trae mejoras del zsh image base sin tocar nuestro
-  Dockerfile (mismo Ubuntu 24.04, mismo helper `add_text_to_zshrc`
-  que seguimos usando). Mantenerse al dia con la base image es
-  importante: ademas de mejoras del zsh, incorpora parches de
-  seguridad del OS.
+- **Bump base image `cartagodocker/zsh:v1.0.2` -> `v1.0.5`**
+  (tag NodeBun 2.0.0 publicado). Unreleased pinnea **zsh v1.0.6**.
 
 ### Fixed
 - **Wrapper exit code propagation**: `scripts/bun_wrapper.zsh` now propagates
