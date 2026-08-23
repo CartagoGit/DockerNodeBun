@@ -1,20 +1,22 @@
 #!/bin/bash
 #
-# Wrapper instalado en /usr/local/bin/bun_wrapper.zsh (Dockerfile COPY)
-# y enlazado desde ${BUN_BIN}/bun.
+# PATH name is bun_wrapper.zsh (COPY from this repo) and ${BUN_BIN}/bun
+# is a symlink to it. The shebang is bash on purpose:
+#   - [[ ]], ${arg%%=*}, and the flag loop are bash, not POSIX sh / zsh.
+#   - zsh would parse this file differently. Do not change the shebang
+#     without rewriting the body. The .zsh suffix is historical.
 #
-# Reglas de output:
-#   - Todo lo que imprima este wrapper va a STDERR, NO stdout.
-#     Razon: muchos callers (CI, scripts) hacen 'bun ... | head -5' o
-#     redirigen stdout a parsers. Si el wrapper contamina stdout con
-#     'Running bun_wrapper.sh...', los parsers se rompen.
-#   - El output real de bun_original se mantiene en stdout intacto.
+# What this wrapper does (then execs bun_original):
+#   1. bun_original picks AVX2 vs baseline from /proc/cpuinfo.
+#   2. After `bun install -g` / `bun add -g` as root/sudo, chmod 777
+#      on $BUN_HOME so other uids can use global bins.
+#   3. Exit code is bun_original's (safe with set -e).
 #
-# Reglas de exit code:
-#   - Se propaga el exit code de bun_original via 'exit ${bun_original_exit}'.
-#     Antes el wrapper retornaba 0 siempre, lo que rompia 'set -e' en
-#     scripts CI: 'set -e; bun --silent run script' fallaba silenciosamente.
-#     Ver commit f025a67 (logs a stderr) y bc766fa (exit code).
+# Output:
+#   - bun's stdout is untouched.
+#   - Wrapper chatter goes to STDERR only.
+#   - Default: silent. `BUN_WRAPPER_DEBUG=1 bun …` prints one line
+#     with the args (and the chmod line still prints when it runs).
 
 GLOBAL=false
 INSTALL=false
@@ -25,7 +27,9 @@ elif command -v sudo &>/dev/null && sudo -n true &>/dev/null; then
     IS_ROOT_PRIV=true
 fi
 
-echo "Running bun_wrapper.sh script with parameters: $@" >&2
+if [[ "${BUN_WRAPPER_DEBUG:-}" == 1 ]]; then
+    echo "bun_wrapper: $*" >&2
+fi
 
 BUN_HOME="${BUN_HOME:-/usr/share/bun}"
 "$BUN_HOME/bin/bun_original" "$@"
