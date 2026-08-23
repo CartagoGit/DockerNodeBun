@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- GitHub Release on tag push (`docker-hub-update.yml`). If a Release
+  for that tag already exists, it is deleted and recreated. Hub is
+  unchanged: existing Hub tags are skipped (delete them on Hub to
+  republish the image).
+
 ## [2.0.0] - 2026-08-23
 
 Pin **`FROM cartagodocker/zsh:v2.0.0`**. CMD without ENTRYPOINT.
@@ -22,8 +28,10 @@ No sudo fallbacks. Local smoke ~695 MB (Node 26 matrix).
 - **`/etc/profile.d/nodebun.sh`**: re-exporta `BUN_*` / `FNM_*` /
   `NODE_DEFAULT_VERSION` / `NODEBUN_IMAGE_VERSION` / `IS_INTO_CONTAINER`.
   Sourced from bash.bashrc **and** `/etc/zsh/zprofile` (Ubuntu zsh
-  login does not source `/etc/profile`). Build sed-inlines the matrix
-  Node and image X.Y.Z so `su -` still has them after Docker ENV drops.
+  login does not source `/etc/profile`). The script is matrix-agnostic.
+  Per-image Node / X.Y.Z are `/usr/share/nodebun/build.env` (written
+  at build from ARG). Login shells that dropped Docker ENV read it;
+  an already-set ENV (or a child overwrite) wins.
 - **`sudo` NOPASSWD por defecto** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`).
   Compose `user: 1000:1000` no carga grupos suplementarios (`sudo`);
   la regla tiene que ser ALL, no `%sudo`. El limite es no escribir
@@ -60,7 +68,9 @@ No sudo fallbacks. Local smoke ~695 MB (Node 26 matrix).
 - **Login zsh (`su -`).** Ubuntu `/etc/zsh/zprofile` does not source
   `/etc/profile.d`. `su - ubuntu` (zsh, often non-interactive) skipped
   `.zshrc` and dropped Docker ENV, so `fnm use` had no `fnm env` and
-  `NODE_DEFAULT_VERSION` was empty. zprofile now sources `nodebun.sh`.
+  `NODE_DEFAULT_VERSION` was empty. zprofile now sources `nodebun.sh`,
+  which runs `fnm env --shell bash` and, if ENV was dropped, fills
+  Node / X.Y.Z from `/usr/share/nodebun/build.env` (this image's ARG).
 - CHANGELOG must not say a redundant `fnm use` was removed: it stays
   in the Dockerfile RUN (npm global) **and** in `.zshrc`.
 

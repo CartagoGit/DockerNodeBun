@@ -257,7 +257,7 @@ lee .github/matrices.yml → para cada status:active:
   nombre=n26.3.1_b1.3.14, node=26.3.1,  bun=1.3.14, fnm=1.39.0, npm=12.0.1
   ↓
 para cada entrada del plan:
-  ¿tag ya existe en DockerHub? → skip (no-op, idempotente)
+  ¿tag ya existe en DockerHub? → skip (no-op; bórralo en Hub para republicar)
   docker build --build-arg VERSION=2.0.0 \
                --build-arg NODE_DEFAULT_VERSION=22.21.1 \
                --build-arg BUN_VERSION=1.3.14 \
@@ -265,10 +265,14 @@ para cada entrada del plan:
                --build-arg NPM_VERSION=10.9.4 \
                -t cartagodocker/nodebun:v2.0.0_n22.21.1_b1.3.14 .
   docker push cartagodocker/nodebun:v2.0.0_n22.21.1_b1.3.14
+gh release create v2.0.0  (si ya existía, se borra y se recrea)
 ```
 
-El workflow es **idempotente**: si vuelves a pushear el mismo tag, los
-tags que ya existen en DockerHub se skipean sin re-build.
+Hub es **idempotente**: si vuelves a pushear el mismo tag, los tags
+que ya existen en DockerHub se skipean sin re-build. El **GitHub
+Release** sí se recrea (debug: borrar el git tag, arreglar, volver a
+subir la misma versión). Para republicar la imagen, borra el tag en
+Hub tú.
 
 ### El manifesto `.github/matrices.yml`
 

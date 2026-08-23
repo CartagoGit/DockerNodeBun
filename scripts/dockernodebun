@@ -145,14 +145,15 @@ Environment
 ========================================================================
 
 Login shells (`su -`, `bash -l`) drop Docker ENV. /etc/profile.d/nodebun.sh
-re-exports BUN_* / FNM_* / NODE_DEFAULT_VERSION / NODEBUN_IMAGE_VERSION /
-IS_INTO_CONTAINER (also sourced from bash.bashrc, and from
-/etc/zsh/zprofile so login zsh sees them). It does **not** re-export
+re-exports BUN_* / FNM_* / IS_INTO_CONTAINER (also sourced from
+bash.bashrc and /etc/zsh/zprofile). Node / X.Y.Z for *this* image are
+/usr/share/nodebun/build.env (written at build from ARG — not hardcoded
+in the script). Used only when ENV is unset. It does **not** re-export
 PATH: node / npm / npx / bun / fnm are already in /usr/local/bin,
 which login PATH keeps. Interactive zsh still runs `fnm env` from .zshrc;
 `su -c` without a TTY does not.
 
-  NODE_DEFAULT_VERSION   Matrix Node (tag n… part; Docker ENV + profile.d)
+  NODE_DEFAULT_VERSION   Matrix Node (tag n… part; ENV, else build.env)
   FNM_HOME               /usr/share/fnm
   FNM_DIR                /usr/share/fnm/store  (global, 777)
   FNM_BIN                /usr/share/fnm/bin

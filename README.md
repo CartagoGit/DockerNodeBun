@@ -321,7 +321,7 @@ docker run --rm -it \
 | `ZSH_IMAGE_VERSION` | Parent zsh tag (`cartagodocker/zsh`). `dockerzsh --version` uses it. |
 | `LANG` / `LC_ALL` | Inherited `C.UTF-8` |
 
-Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh` re-exports the NodeBun variables (also sourced from `/etc/zsh/zprofile`, because Ubuntu login zsh does not source `/etc/profile`). Interactive zsh still runs `fnm env` from `.zshrc`.
+Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh` re-exports the NodeBun variables (also sourced from `/etc/zsh/zprofile`, because Ubuntu login zsh does not source `/etc/profile`). The script is the same on every matrix. This image’s Node / X.Y.Z live in `/usr/share/nodebun/build.env` (written at build from ARG) and are used only when ENV is unset. Interactive zsh still runs `fnm env` from `.zshrc`.
 
 `FNM_DIR` is `777` (same idea as bun): any uid can `fnm install` / `fnm use`. Homes and `/etc/skel` get `~/.local/share/fnm` → that store, plus `~/.local/state` (fnm multishells) owned by that user so `fnm env` works as uid 1000.
 
@@ -403,8 +403,8 @@ GitHub Actions (secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_PASSWORD`; variable `DO
 
 | Trigger | What happens |
 |---|---|
-| Git tag `v{X.Y.Z}` | One Hub tag per **active** matrix — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
-| Git tag `v{X.Y.Z}_n…_b…` | That matrix only. No `latest`. Idempotent. |
+| Git tag `v{X.Y.Z}` | One Hub tag per **active** matrix if new (skip Hub tags that already exist) + GitHub Release for `v{X.Y.Z}` (replaced if it already exists) — [docker-hub-update.yml](./.github/workflows/docker-hub-update.yml) |
+| Git tag `v{X.Y.Z}_n…_b…` | That matrix only. Skip Hub if the tag exists. GitHub Release for that matrix tag (replaced if it exists; not marked latest). No Hub `:latest`. |
 | Push to `main` that changes `README.md` | Docker Hub long description — [update-dockerhub-description.yml](./.github/workflows/update-dockerhub-description.yml) |
 
 ```bash

@@ -18,6 +18,11 @@ name: Build and Push Docker Images
 #
 # Véase .github/matrices.yml y VERSIONING.md para el detalle del
 # esquema de versionado y el modelo de "tag trigger + manifesto".
+#
+# GitHub Release: after Hub (push or skip), create a Release for the
+# git tag. If a Release already exists (debug: delete git tag, fix,
+# re-push the same version), delete and recreate it. Hub tags that
+# already exist are skipped — delete them on Hub yourself to republish.
 
 on:
   push:
@@ -33,6 +38,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -227,7 +234,8 @@ jobs:
 
       - name: Build and push each image
         # Por cada línea del plan: check si el tag ya existe en DockerHub,
-        # build con los --build-arg correctos, push.
+        # build con los --build-arg correctos, push. Hub no se pisa: si
+        # el tag existe, skip (borra el tag en Hub para republicar).
         id: build-images
         run: |
           set -euo pipefail
@@ -245,11 +253,10 @@ jobs:
             echo "  $description"
             echo "============================================================"
 
-            # ¿Ya existe en DockerHub?
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
               "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}/tags/${tag}/")
             if [[ "$HTTP" == "200" ]]; then
-              echo "Tag $tag already exists on Docker Hub — skipping (no-op)."
+              echo "::warning::Tag $tag already exists on Docker Hub — skipping (delete it on Hub to republish)."
               SKIPPED+=("$tag")
               continue
             fi
@@ -291,10 +298,78 @@ jobs:
           echo "Failed    (${#FAILED[@]}): ${FAILED[*]:-<none>}"
           echo ""
 
+          {
+            printf '%s\n' "${PUBLISHED[@]:-}"
+          } > /tmp/published-tags.txt
+          {
+            printf '%s\n' "${SKIPPED[@]:-}"
+          } > /tmp/skipped-tags.txt
+
           if [[ ${#FAILED[@]} -gt 0 ]]; then
             echo "::error::One or more images failed. See above."
             exit 1
           fi
+
+      - name: Create or replace GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${VERSION_TAG}"
+          VER="${VERSION}"
+          NOTES="/tmp/release-notes.md"
+
+          {
+              echo "## Docker Hub"
+              echo
+              if [ -s /tmp/published-tags.txt ]; then
+                while IFS= read -r hub_tag; do
+                  [[ -z "$hub_tag" ]] && continue
+                  echo "- \`${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${hub_tag}\`"
+                done < /tmp/published-tags.txt
+              else
+                echo "- (no Hub tags published this run)"
+              fi
+              if [ -s /tmp/skipped-tags.txt ]; then
+                echo
+                echo "Already on Hub (skipped):"
+                while IFS= read -r hub_tag; do
+                  [[ -z "$hub_tag" ]] && continue
+                  echo "- \`${DOCKERHUB_USERNAME}/${DOCKERHUB_REPO}:${hub_tag}\`"
+                done < /tmp/skipped-tags.txt
+              fi
+              echo
+              if [ -f CHANGELOG.md ]; then
+                  SECTION=$(awk -v ver="$VER" '
+                      $0 ~ "^## \\[" ver "\\]" {found=1; print; next}
+                      found && /^## \[/ {exit}
+                      found {print}
+                  ' CHANGELOG.md)
+                  if [ -n "$SECTION" ]; then
+                      echo "$SECTION"
+                  else
+                      echo "See [CHANGELOG.md](./CHANGELOG.md)."
+                  fi
+              else
+                  echo "See [CHANGELOG.md](./CHANGELOG.md)."
+              fi
+          } > "$NOTES"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "GitHub Release $TAG exists — deleting to recreate (overwrite)."
+              gh release delete "$TAG" --yes
+          fi
+
+          LATEST_FLAG=(--latest=true)
+          if [[ -n "${MATRIX_NAME:-}" ]]; then
+            LATEST_FLAG=(--latest=false)
+          fi
+
+          gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file "$NOTES" \
+              --target "${GITHUB_SHA}" \
+              "${LATEST_FLAG[@]}"
 
       # El tag 'latest' no se publica desde este repo. VERSIONING.md explica
       # el rationale (reproducibilidad, cada consumidor fija su tag exacto).

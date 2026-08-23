@@ -146,10 +146,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sfn ${BUN_BIN}/bun ${NODE_BIN}/bun \
     && chmod +x ${BIN_HOME}/in-bash ${BIN_HOME}/in-sh ${BIN_HOME}/skip-if-container ${BIN_HOME}/only-in-container \
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh ${BIN_HOME}/dockernodebun \
-    && sed -i \
-         -e 's|^export NODE_DEFAULT_VERSION=.*|export NODE_DEFAULT_VERSION="${NODE_DEFAULT_VERSION:-'"${NODE_DEFAULT_VERSION}"'}"|' \
-         -e 's|^export NODEBUN_IMAGE_VERSION=.*|export NODEBUN_IMAGE_VERSION="${NODEBUN_IMAGE_VERSION:-'"${VERSION}"'}"|' \
-         ${BIN_HOME}/nodebun-profile.sh \
+    && mkdir -p /usr/share/nodebun \
+    && printf '%s\n' \
+         "NODEBUN_BUILD_NODE=${NODE_DEFAULT_VERSION}" \
+         "NODEBUN_BUILD_VERSION=${VERSION}" \
+         > /usr/share/nodebun/build.env \
     && install -m 0644 ${BIN_HOME}/nodebun-profile.sh /etc/profile.d/nodebun.sh \
     && if [ -f /etc/bash.bashrc ]; then printf '\n# nodebun login/non-login bash\n. /etc/profile.d/nodebun.sh\n' >> /etc/bash.bashrc; fi \
     && if [ -f /etc/zsh/zprofile ]; then \
