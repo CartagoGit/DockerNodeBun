@@ -321,7 +321,7 @@ docker run --rm -it \
 | `ZSH_IMAGE_VERSION` | Parent zsh tag (`cartagodocker/zsh`). `dockerzsh --version` uses it. |
 | `LANG` / `LC_ALL` | Inherited `C.UTF-8` |
 
-Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh` re-exports the NodeBun variables (zsh already ships UTF-8 via `zsh-image.sh`).
+Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh` re-exports the NodeBun variables (also sourced from `/etc/zsh/zprofile`, because Ubuntu login zsh does not source `/etc/profile`). Interactive zsh still runs `fnm env` from `.zshrc`.
 
 `FNM_DIR` is `777` (same idea as bun): any uid can `fnm install` / `fnm use`. Homes and `/etc/skel` get `~/.local/share/fnm` → that store, plus `~/.local/state` (fnm multishells) owned by that user so `fnm env` works as uid 1000.
 
@@ -361,7 +361,7 @@ dockernodebun node --version | node -v
 | Id | Where | Section |
 |---|---|---|
 | `nodebun` | this image | Intro (PATH at build, no ENTRYPOINT, TTY vs keep-alive) |
-| `runtimes` | this image | `node`, `npm`, `npx`, `corepack`, `bun`, `fnm` |
+| `runtimes` | this image | `node`, `npm`, `npx`, `bun`, `fnm` |
 | `helpers` | this image | `in-bash`, `in-sh`, `only-in-container`, `skip-if-container` |
 | `env` | this image | `NODE_DEFAULT_VERSION`, `FNM_*`, `BUN_*`, `IS_INTO_CONTAINER` |
 | `shells`, `listing`, `edit`, `archives`, `network`, `system`, `extras`, `helpers`, `fonts` | zsh base | Same ids as [`dockerzsh --sections`](https://github.com/CartagoGit/DockerZsh#catalogue-cli-dockerzsh) — full tool list in [zsh README — Utilities](https://github.com/CartagoGit/DockerZsh#utilities) |

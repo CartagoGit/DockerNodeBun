@@ -33,8 +33,9 @@ Donde:
   CVEs de V8 en Node y fixes del loader TS en bun justifican el patch.
 - **Matrices paralelas**: el repo puede mantener varias matrices
   activas a la vez (ej. `n22.21.1_b1.3.14` para LTS consumers y
-  `n26.3.1_b1.3.14` como matriz canónica futura). Cada matriz tiene
-  su propia rama git y se publica con el mismo contador `X.Y.Z`.
+  `n26.3.1_b1.3.14` como matriz canónica futura). Se publican con el
+  mismo contador `X.Y.Z`. La fuente de runtime es
+  `.github/matrices.yml`, no una rama git por matriz.
 - El separador `_` (underscore) se eligió por **compatibilidad con el
   OCI Distribution Spec** que DockerHub y la mayoría de registries aplican
   a los tags (regex `[a-z0-9][a-z0-9._-]{0,127}`). El `+` (estilo

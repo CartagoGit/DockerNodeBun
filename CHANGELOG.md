@@ -7,51 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- README lists **every** extra CLI: inherited zsh utilities (link to
-  the parent Utilities section) plus NodeBun runtimes (`node`/`npm`/
-  `bun`/`fnm`) with docs links. Own helpers (`in-bash`, `in-sh`,
-  `only-in-container`, `skip-if-container`) have usage examples here
-  (not Ubuntu man pages). Catalogue table no longer uses `…`.
-- Catalogue `runtimes` headings: `node`/`npm`/`npx`/`bun`/`fnm` only.
-  `bunx` is a zsh alias (`bun x`); `corepack` is not on this matrix.
-- **Base `cartagodocker/zsh:v2.0.0`.** Hereda unzip, ca-certificates, sudo,
-  SSH client, daily CLI extras, `dockerzsh` y `CMD` sin ENTRYPOINT.
-  NodeBun **no** reinstala unzip ni certs (`libatomic1` sí: lo necesita bun).
-  No añade Docker CLI ni un segundo kit de shell. Exige esa base
-  (build falla si faltan `sudo-password` / `container-nopasswd` / `dockerzsh`).
-- **Sin fallback sudo.** `COPY` solo helpers NodeBun
-  (`bun_wrapper`, `in-bash`, `in-sh`, `only-in-container`,
-  `skip-if-container`, `nodebun-profile.sh`, `dockernodebun`).
-  Scripts `sudo-*` de este repo **borrados**.
-- **zshrc:** no se duplica `apply-sudo-password-on-boot.sh` si la
-  base ya lo puso en `/usr/share/globally/.zshrc`.
-- **`dockernodebun --help`:** prints `dockerzsh --help` then extras.
-  `--version | -v` is image identity. Tool versions:
-  `dockernodebun --list --version | -l -v`, `runtimes -v`, `node -v`
-  (headings discovered, not hardcoded).
-- **`bun_wrapper`:** silent unless `BUN_WRAPPER_DEBUG=1`. Shebang is
-  bash (historical `.zsh` filename). Documented in README / wrapper header.
-- **Build `bun --version`:** fails the image if bun does not start
-  (`test -x bun_avx2` / `bun_baseline` then `bun --version` without `|| warn`).
-- **`NODEBUN_IMAGE_VERSION`:** same idea as zsh `ZSH_IMAGE_VERSION`. A
-  child `FROM nodebun` that sets `VERSION` does not make
-  `dockernodebun --version` lie.
-
-### Fixed
-- CHANGELOG 2.0.0 said a redundant `fnm use` was removed. That was
-  wrong: `fnm use ${NODE_DEFAULT_VERSION}` stays in the Dockerfile RUN
-  (so `npm install -g` sees the matrix Node) **and** in `.zshrc`
-  (so interactive zsh activates that Node). Do not drop it.
-- **`fnm env` / `fnm use` as uid 1000.** Build `mkdir ~/.local/share`
-  as root left `/home/ubuntu/.local` root-owned and created no
-  `~/.local/state`. fnm could not write
-  `~/.local/state/fnm_multishells` (`Can't create the symlink…`).
-  The image now creates `~/.local/state` and `chown`s `~/.local` to
-  the home owner (`/etc/skel` stays root so `useradd -m` copies it).
-  `/usr/local/bin/node` still works without `fnm use`.
-
 ## [2.0.0] - 2026-08-23
+
+Pin **`FROM cartagodocker/zsh:v2.0.0`**. CMD without ENTRYPOINT.
+No sudo fallbacks. Local smoke ~695 MB (Node 26 matrix).
 
 ### Added
 - **`in-bash` / `in-sh`**: helpers en `/usr/local/bin` para lanzar
@@ -60,8 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`skip-if-container` / `only-in-container`**: predicados para no
   correr (o solo correr) un comando si estamos dentro de nodebun.
   Detectan `/.dockerenv` o `IS_INTO_CONTAINER=true`.
-- **`/etc/profile.d/nodebun.sh`**: re-exporta `BUN_HOME` / `FNM_DIR`
-  en shells login (`su -`, `bash -l`). Docker ENV no llega a `su -`.
+- **`/etc/profile.d/nodebun.sh`**: re-exporta `BUN_*` / `FNM_*` /
+  `NODE_DEFAULT_VERSION` / `NODEBUN_IMAGE_VERSION` / `IS_INTO_CONTAINER`.
+  Sourced from bash.bashrc **and** `/etc/zsh/zprofile` (Ubuntu zsh
+  login does not source `/etc/profile`). Build sed-inlines the matrix
+  Node and image X.Y.Z so `su -` still has them after Docker ENV drops.
 - **`sudo` NOPASSWD por defecto** (`ALL ALL=(ALL:ALL) NOPASSWD:ALL`).
   Compose `user: 1000:1000` no carga grupos suplementarios (`sudo`);
   la regla tiene que ser ALL, no `%sudo`. El limite es no escribir
@@ -88,6 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `fnm env --use-on-cd=false` (fnm 1.38.1 no acepta valor). Docker
     marcaba el layer OK y la imagen salia sin node/bun en PATH.
   - Wrapper de bun: fallback `BUN_HOME=/usr/share/bun` para `su -`.
+- **`fnm env` / `fnm use` as uid 1000.** Build `mkdir ~/.local/share`
+  as root left `/home/ubuntu/.local` root-owned and created no
+  `~/.local/state`. fnm could not write
+  `~/.local/state/fnm_multishells`. The image now creates
+  `~/.local/state` and `chown`s `~/.local` to the home owner
+  (`/etc/skel` stays root so `useradd -m` copies it).
+  `/usr/local/bin/node` still works without `fnm use`.
+- **Login zsh (`su -`).** Ubuntu `/etc/zsh/zprofile` does not source
+  `/etc/profile.d`. `su - ubuntu` (zsh, often non-interactive) skipped
+  `.zshrc` and dropped Docker ENV, so `fnm use` had no `fnm env` and
+  `NODE_DEFAULT_VERSION` was empty. zprofile now sources `nodebun.sh`.
+- CHANGELOG must not say a redundant `fnm use` was removed: it stays
+  in the Dockerfile RUN (npm global) **and** in `.zshrc`.
 
 ### Changed
 - **Tag scheme migrated to `v{X.Y.Z}_n..._b...`** (esquema 3, vigente desde
@@ -112,6 +87,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refleja la rotura del modelo de publicacion: trigger tag + manifesto
   + eliminacion de ramas de matriz. La "rotura" se registra en el
   bump X.Y.Z, no en un tag paralelo.
+- **Base `cartagodocker/zsh:v2.0.0`.** Hereda unzip, ca-certificates, sudo,
+  SSH client, daily CLI extras, `dockerzsh` y `CMD` sin ENTRYPOINT.
+  NodeBun **no** reinstala unzip ni certs (`libatomic1` sí: lo necesita bun).
+  No añade Docker CLI ni un segundo kit de shell. Exige esa base
+  (build falla si faltan `sudo-password` / `container-nopasswd` / `dockerzsh`).
+- **Sin fallback sudo.** `COPY` solo helpers NodeBun
+  (`bun_wrapper`, `in-bash`, `in-sh`, `only-in-container`,
+  `skip-if-container`, `nodebun-profile.sh`, `dockernodebun`).
+  Scripts `sudo-*` de este repo **borrados**.
+- **zshrc:** no se duplica `apply-sudo-password-on-boot.sh` si la
+  base ya lo puso en `/usr/share/globally/.zshrc`.
+- **`dockernodebun --help`:** prints `dockerzsh --help` then extras.
+  `--version | -v` is image identity. Tool versions:
+  `dockernodebun --list --version | -l -v`, `runtimes -v`, `node -v`
+  (headings discovered, not hardcoded). Catalogue `runtimes`:
+  `node`/`npm`/`npx`/`bun`/`fnm` only (`bunx` is a zsh alias;
+  `corepack` is not on this matrix).
+- **`bun_wrapper`:** silent unless `BUN_WRAPPER_DEBUG=1`. Shebang is
+  bash (historical `.zsh` filename).
+- **Build `bun --version`:** fails the image if bun does not start
+  (`test -x bun_avx2` / `bun_baseline` then `bun --version` without `|| warn`).
+- **`NODEBUN_IMAGE_VERSION`:** same idea as zsh `ZSH_IMAGE_VERSION`. A
+  child `FROM nodebun` that sets `VERSION` does not make
+  `dockernodebun --version` lie.
+- README lists **every** extra CLI: inherited zsh utilities (link to
+  the parent Utilities section) plus NodeBun runtimes with docs links.
+  Own helpers have usage examples here (not Ubuntu man pages).
 
 ### Added
 - **`.github/matrices.yml`**: manifesto canónico de las matrices activas
@@ -153,9 +155,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Giving permissions ...` messages moved from stdout to stderr. Previously
   they contaminated the output of any caller that piped or parsed
   `bun ...` stdout, breaking CI log filters and downstream parsers.
-- **Dockerfile `bun --version` no longer aborts build** *(later reverted
-  in Unreleased: a broken bun must fail the image)*: the 2.0.0 Hub tags
-  used `|| echo "[warn] ..."`.
+- **Dockerfile `bun --version` no longer aborts build** *(later
+  reverted in this same 2.0.0 tree: a broken bun must fail the image)*:
+  the first Hub 2.0.0 tags used `|| echo "[warn] ..."`.
 - **Dockerfile base image pinned**: `FROM cartagodocker/zsh:latest` changed
   to `FROM cartagodocker/zsh:v1.0.2` for reproducible builds.
 - **`fnm use` stays.** `fnm default` plus `fnm use ${NODE_DEFAULT_VERSION}`

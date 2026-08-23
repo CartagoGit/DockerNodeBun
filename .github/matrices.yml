@@ -58,4 +58,4 @@ matrices:
     bun: 1.3.14
     fnm: 1.39.0
     npm: 12.0.1
-    description: "Node 26 LTS"
+    description: "Node 26 current"

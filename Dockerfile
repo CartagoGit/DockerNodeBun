@@ -146,8 +146,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sfn ${BUN_BIN}/bun ${NODE_BIN}/bun \
     && chmod +x ${BIN_HOME}/in-bash ${BIN_HOME}/in-sh ${BIN_HOME}/skip-if-container ${BIN_HOME}/only-in-container \
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh ${BIN_HOME}/dockernodebun \
+    && sed -i \
+         -e 's|^export NODE_DEFAULT_VERSION=.*|export NODE_DEFAULT_VERSION="${NODE_DEFAULT_VERSION:-'"${NODE_DEFAULT_VERSION}"'}"|' \
+         -e 's|^export NODEBUN_IMAGE_VERSION=.*|export NODEBUN_IMAGE_VERSION="${NODEBUN_IMAGE_VERSION:-'"${VERSION}"'}"|' \
+         ${BIN_HOME}/nodebun-profile.sh \
     && install -m 0644 ${BIN_HOME}/nodebun-profile.sh /etc/profile.d/nodebun.sh \
     && if [ -f /etc/bash.bashrc ]; then printf '\n# nodebun login/non-login bash\n. /etc/profile.d/nodebun.sh\n' >> /etc/bash.bashrc; fi \
+    && if [ -f /etc/zsh/zprofile ]; then \
+         printf '\n# nodebun: Ubuntu zsh zprofile does not source /etc/profile.\n# su - (login, often non-interactive) drops Docker ENV and skips .zshrc.\n[ -r /etc/profile.d/nodebun.sh ] && . /etc/profile.d/nodebun.sh\n' >> /etc/zsh/zprofile; \
+       fi \
     && chmod -R 777 ${BUN_HOME} \
     && test -x ${BUN_BIN}/bun_avx2 \
     && test -x ${BUN_BIN}/bun_baseline \
