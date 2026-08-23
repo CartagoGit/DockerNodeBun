@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- README lists **every** extra CLI: inherited zsh utilities (link to
+  the parent Utilities section) plus NodeBun runtimes (`node`/`npm`/
+  `bun`/`fnm`) with docs links. Own helpers (`in-bash`, `in-sh`,
+  `only-in-container`, `skip-if-container`) have usage examples here
+  (not Ubuntu man pages). Catalogue table no longer uses `…`.
+- Catalogue `runtimes` headings: `node`/`npm`/`npx`/`bun`/`fnm` only.
+  `bunx` is a zsh alias (`bun x`); `corepack` is not on this matrix.
 - **Base `cartagodocker/zsh:v2.0.0`.** Hereda unzip, ca-certificates, sudo,
   SSH client, daily CLI extras, `dockerzsh` y `CMD` sin ENTRYPOINT.
   NodeBun **no** reinstala unzip ni certs (`libatomic1` sí: lo necesita bun).
@@ -36,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrong: `fnm use ${NODE_DEFAULT_VERSION}` stays in the Dockerfile RUN
   (so `npm install -g` sees the matrix Node) **and** in `.zshrc`
   (so interactive zsh activates that Node). Do not drop it.
+- **`fnm env` / `fnm use` as uid 1000.** Build `mkdir ~/.local/share`
+  as root left `/home/ubuntu/.local` root-owned and created no
+  `~/.local/state`. fnm could not write
+  `~/.local/state/fnm_multishells` (`Can't create the symlink…`).
+  The image now creates `~/.local/state` and `chown`s `~/.local` to
+  the home owner (`/etc/skel` stays root so `useradd -m` copies it).
+  `/usr/local/bin/node` still works without `fnm use`.
 
 ## [2.0.0] - 2026-08-23
 

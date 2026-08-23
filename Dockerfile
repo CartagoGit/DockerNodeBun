@@ -90,6 +90,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
 #   1. FNM_DIR global -> fnm install no escribe en /root/.local.
 #   2. node/npm/npx en /usr/local/bin -> cualquier uid/shell, sin fnm use.
 #   3. symlink ~/.local/share/fnm + /etc/skel -> usuarios nuevos.
+#      También ~/.local/state (fnm multishells) y chown de ~/.local al
+#      dueño del home: mkdir como root dejaba uid 1000 sin escribir.
 #   4. store 777 (como bun): cualquier uid puede instalar/cambiar Node.
 #   5. unzip + ca-certificates + sudo: los trae cartagodocker/zsh:v2.0.0.
 #      No reinstalar. Esta imagen no arranca sobre zsh 1.0.5.
@@ -118,7 +120,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && if [ -x "${NODE_INSTALLATION}/bin/corepack" ]; then ln -sfn "${NODE_INSTALLATION}/bin/corepack" ${NODE_BIN}/corepack; fi \
     && ln -sfn ${FNM_BIN}/fnm ${NODE_BIN}/fnm \
     && chmod -R 777 ${FNM_HOME} \
-    && for dir in /home/* /root /etc/skel; do if [ -d "$dir" ]; then mkdir -p "$dir/.local/share"; rm -rf "$dir/.local/share/fnm"; ln -sfn "${FNM_DIR}" "$dir/.local/share/fnm"; fi; done \
+    && for dir in /home/* /root /etc/skel; do \
+         if [ -d "$dir" ]; then \
+           mkdir -p "$dir/.local/share" "$dir/.local/state"; \
+           rm -rf "$dir/.local/share/fnm"; \
+           ln -sfn "${FNM_DIR}" "$dir/.local/share/fnm"; \
+           if [ "$dir" != /etc/skel ]; then \
+             chown -R "$(stat -c '%u:%g' "$dir")" "$dir/.local"; \
+           fi; \
+         fi; \
+       done \
     && mkdir -p ${BUN_HOME}/bin \
     && curl -fsSL ${BUN_DOWNLOAD_URL_AVX2} -o /tmp/bun-avx2.zip \
     && unzip /tmp/bun-avx2.zip -d /tmp/bun-avx2 \

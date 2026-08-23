@@ -48,18 +48,19 @@ works. Pin the matrix tag; there is no `latest`.
 Runtimes
 ========================================================================
 
-  node / npm / npx / corepack
+  node / npm / npx
       Matrix Node (see NODE_DEFAULT_VERSION on the image tag and ENV).
       Symlinked from the fnm store into /usr/local/bin at build, so any
       uid and any shell sees them without `fnm use`. corepack is linked
-      when the Node install ships it (yarn/pnpm via corepack enable).
+      only when that Node install ships a corepack binary (this matrix
+      does not). yarn/pnpm: install them yourself, or a Node that
+      still includes corepack.
 
       node --version
       npm install
       npx some-cli
-      corepack enable          # if you want yarn/pnpm shims
 
-  bun / bunx
+  bun
       Bun is baked at build. `/usr/local/bin/bun` is a bash wrapper
       (`bun_wrapper.zsh` — bash shebang, historical .zsh name) that:
         1. Picks AVX2 or baseline from /proc/cpuinfo (bun_original).
@@ -73,7 +74,7 @@ Runtimes
       bun --version
       bun install
       bun run dev
-      bunx cowsay hello
+      bun x cowsay hello     # bunx is an interactive zsh alias for bun x
 
   fnm
       Fast Node Manager. Store is global: FNM_DIR=/usr/share/fnm/store
@@ -215,6 +216,8 @@ nb_extract_tools() {
       skip["nodebun"] = 1
       skip["helpers"] = 1
       skip["env"] = 1
+      skipcmd["bunx"] = 1
+      skipcmd["corepack"] = 1
     }
     /^##id:/ {
       cur = substr($0, 6)
@@ -232,7 +235,7 @@ nb_extract_tools() {
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[i])
         split(parts[i], w, /[[:space:]]+/)
         cmd = w[1]
-        if (cmd ~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ && !seen[cmd]++) {
+        if (cmd ~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ && !(cmd in skipcmd) && !seen[cmd]++) {
           print cmd
         }
       }
@@ -258,13 +261,11 @@ nb_print_tool_version() {
   fi
   text=
   for try in --version -V version; do
-    line=$(nb_probe_cmd "$name" "$try" | grep -v '^$' | head -n 1 | tr -d '\r')
-    case "$line" in
-      *[0-9]*)
-        text=$line
-        break
-        ;;
-    esac
+    line=$(nb_probe_cmd "$name" "$try" | tr -d '\r' | grep -v '^$' | grep '[0-9]' | grep -viE 'no such file|unknown option|illegal option|os error' | head -n 1)
+    if [ -n "$line" ]; then
+      text=$line
+      break
+    fi
   done
   if [ -z "$text" ]; then
     bin=$(command -v "$name")

@@ -10,9 +10,9 @@ Grep ASCII only (`os_icon`, `🐳`). Do not dump huge files into tool results.
 
 ## Remaining work (nodebun)
 
-Tracker: `FIXES.md` — **No planned fixes** in the tree.
+Tracker: `FIXES.md` — **No planned fixes.**
 
 Pin **`FROM cartagodocker/zsh:v2.0.0`** — do not revert. Do not retag
-Hub zsh `v1.0.5`. N1/N2 (ENTRYPOINT) are closed on that base.
-
-N5 (wrapper silent + bash shebang documented), N6 (`bun --version` fails the build), N8 (`fnm use` stays; CHANGELOG corrected), N10 (`dockerzsh` required), N11 (PATH not re-exported — `/usr/local/bin` is enough), N13 (sudo fallback scripts deleted) are done in this tree.
+Hub zsh `v1.0.5`. Hub zsh **v2.0.0 is published**. Local smoke on
+`nodebun-local:dev` closed N1/N2 (no ENTRYPOINT) and the uid-1000
+`fnm env` home (`~/.local/state` + chown).

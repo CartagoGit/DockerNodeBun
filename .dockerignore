@@ -1,6 +1,6 @@
 # Excluir todo lo que el Dockerfile NO necesita.
-# El Dockerfile copia ficheros concretos de scripts/ (helpers NodeBun
-# + fallback sudo). El resto del repo es ruido en el contexto.
+# El Dockerfile copia ficheros concretos de scripts/ (helpers NodeBun).
+# El resto del repo es ruido en el contexto.
 
 # VCS
 .git

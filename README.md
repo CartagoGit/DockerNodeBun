@@ -34,8 +34,8 @@ FROM cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
 | 🐚 | Interactive shell | zsh + Oh My Zsh + Powerlevel10k — `CMD ["/usr/bin/zsh"]`, **no ENTRYPOINT** (zsh 2.0.0) |
 | 💻 | Other shells | `bash` and `sh` (dash) — inherited |
 | 🟢 | Node / npm / bun / fnm | Installed at **build**; on `PATH` for every uid and every shell |
-| 📂 | Listing / pager | Inherited: `eza`, `bat`, `fd`, `rg`, `nnn`, `ncdu`/`duf` |
-| 🧰 | Daily CLI | Inherited from zsh (`dockerzsh --help`). **Not** reinstalled here |
+| 📂 | Listing / pager | Inherited from zsh — full list in [Utilities](#utilities) |
+| 🧰 | Daily CLI | Inherited from zsh (not reinstalled). Full inventory: [Utilities](#utilities) |
 | 📖 | Catalogue | `dockernodebun --help` — zsh catalogue, then NodeBun extras (see [Catalogue CLI](#catalogue-cli-dockernodebun)) |
 | 🌐 | Network | Inherited: `curl`, `wget`, `git`, **`openssh-client`** (no sshd), **`ca-certificates`** |
 | 🔐 | sudo | Inherited (NOPASSWD + `sudo-password`). Not overwritten when the base already has it |
@@ -50,6 +50,41 @@ sudo / `dockerzsh` / `add_text_to_*` come from **`cartagodocker/zsh:v2.0.0`**. T
 
 ---
 
+## 🧰 Utilities
+
+This page is the contract for people **using** the image.
+
+**From zsh (inherited, not reinstalled):** every extra CLI in the parent — [zsh README — Utilities](https://github.com/CartagoGit/DockerZsh#utilities). Same binaries, same aliases (`ls` → `eza` in interactive zsh). Inside this container: `dockerzsh --help` or `dockernodebun --listing`.
+
+**This image adds** the runtimes and helpers below. Upstream tools get a docs link. **Our** helpers (`in-bash`, `only-in-container`, …) are documented here — see [Scripts for child images](#scripts-for-child-images).
+
+### Runtimes (NodeBun)
+
+| Tool | What | Docs |
+|---|---|---|
+| `node` | Matrix Node, on `PATH` (`/usr/local/bin`) for every uid and every shell. | [Node.js](https://nodejs.org/docs/latest/api/) |
+| `npm` / `npx` | npm from the matrix (`npm install -g npm@…` at build). | [npm](https://docs.npmjs.com/cli) · [npx](https://docs.npmjs.com/cli/commands/npx) |
+| `bun` | Bun baked at build. `/usr/local/bin/bun` is a bash wrapper that picks AVX2 vs baseline from `/proc/cpuinfo`. Wrapper chatter only if `BUN_WRAPPER_DEBUG=1`. Interactive zsh aliases `bunx` → `bun x`. | [bun](https://bun.sh/docs) |
+| `fnm` | Fast Node Manager. Store is `FNM_DIR=/usr/share/fnm/store` (777). `fnm use` is this shell only; a new shell is back on the matrix. | [fnm](https://github.com/Schniz/fnm) |
+
+`libatomic1` is installed because bun needs it.
+
+### NodeBun helpers (ours)
+
+| Command | What |
+|---|---|
+| `in-bash` | `bash --login` (loads `profile.d`). When a snippet is not zsh-safe. |
+| `in-sh` | POSIX `sh -l`. |
+| `only-in-container` | Run CMD **only inside** the container (`/.dockerenv` or `IS_INTO_CONTAINER=true`). |
+| `skip-if-container` | No-op inside; run CMD **only on the host**. |
+| `dockernodebun` | Catalogue: zsh first, then this image. |
+
+Usage and examples: [Scripts for child images](#scripts-for-child-images). Catalogue: `dockernodebun --helpers`.
+
+zsh helpers (`add_text_to_zshrc`, `sudo-password`, …) are unchanged — [zsh README — Scripts](https://github.com/CartagoGit/DockerZsh#scripts-for-child-images) or `dockernodebun --zsh-helpers`.
+
+---
+
 ## 📏 Image size
 
 `docker images` is uncompressed. Hub pull is gzip layers (smaller). On top of `cartagodocker/zsh:v2.0.0`.
@@ -61,11 +96,11 @@ sudo / `dockerzsh` / `add_text_to_*` come from **`cartagodocker/zsh:v2.0.0`**. T
 | bun AVX2 zip + baseline zip | ~**2 × 90–110 MB** unpacked | ~34 MB + ~34 MB zips |
 | fnm | ~8 MB | ~3 MB zip |
 | `libatomic1` | ~0.04 MB | tiny |
-| **Whole tag** (Hub 2.0.0 on zsh 1.0.5, Node 22) | **~642 MB** | Hub layers (not listed for every matrix) |
+| **Whole tag** (local 2.0.0 on Hub zsh 2.0.0, Node 26) | **~695 MB** | Hub layers (not listed for every matrix) |
 
 Two bun builds are on purpose: `/usr/local/bin/bun` is a **bash** wrapper (`bun_wrapper.zsh` — historical `.zsh` name, `#!/bin/bash` shebang) that picks AVX2 vs baseline from `/proc/cpuinfo`. That **doubles** bun on disk. The wrapper is silent unless `BUN_WRAPPER_DEBUG=1`. One Node version is baked (`fnm install` of the matrix); extra `fnm install` at runtime grows `FNM_DIR`.
 
-After zsh 2.0.0 is on Hub, expect NodeBun disk ≈ zsh 2.0.0 + ~350–450 MB (Node + two bun + fnm), around **~600–700 MB** uncompressed — same ballpark as Hub NodeBun 2.0.0 (~642 MB), plus the zsh CLI extras.
+NodeBun disk ≈ zsh 2.0.0 + Node + two bun + fnm: local smoke **~695 MB** uncompressed (Node 26 matrix). Hub NodeBun 2.0.0 on zsh 1.0.5 was ~642 MB.
 
 ---
 
@@ -108,9 +143,17 @@ zsh extras (prompt, `ls` → eza, `bat`) load from `~/.zshrc` and need a **TTY**
 Needs a **TTY** (`-it` or `exec -it`).
 
 ```bash
-docker run --rm -it cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
-docker run --rm -it --user 1000:1000 cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
-docker exec -it <container> zsh
+# Hub tag (after publish) or local smoke image:
+#   IMG=cartagodocker/nodebun:v2.0.0_n26.3.1_b1.3.14
+IMG=nodebun-local:dev
+
+docker run --rm -it --user 1000:1000 -w /home/ubuntu \
+  -v "$HOME/.ssh:/$USER/.ssh:ro" \
+  -v "$HOME/.gitconfig:/$USER/.gitconfig:ro" \
+  "$IMG"
+
+# root, no bind:
+docker run --rm -it "$IMG"
 ```
 
 `ls` → eza with icons/colors. `bat` works. Powerlevel10k draws the prompt. `node`, `npm`, `bun` work in every shell. Inside zsh you can still `bash`, `sh`, `exit`.
@@ -192,20 +235,50 @@ Without a Nerd Font you get boxes on powerline / `ls` icons. That is not an imag
 
 ### From zsh (inherited)
 
-`add_text_to_zshrc`, `add_text_to_p10k`, `share_config_globally` — same CLI as [zsh](https://github.com/CartagoGit/DockerZsh#scripts-for-child-images). They write `/usr/share/globally/...` and `sudo` if needed. Full text: `dockerzsh --helpers` or `dockernodebun --zsh-helpers`.
+`add_text_to_zshrc`, `add_text_to_p10k`, `share_config_globally`, `sudo-password`, `sudo-nopasswd` — same CLI as [zsh](https://github.com/CartagoGit/DockerZsh#scripts-for-child-images). They write `/usr/share/globally/...` and `sudo` if needed. Full text: `dockerzsh --helpers` or `dockernodebun --zsh-helpers`.
 
 ### NodeBun only
 
-Most people never type these. `bash pepe.sh` is enough. They exist so the **same** Makefile can run on the host and inside the container.
+Most people never type these. `bash pepe.sh` is enough. They exist so the **same** Makefile can run on the host and inside the container. They detect `/.dockerenv` or `IS_INTO_CONTAINER=true`.
 
-| Command | What it does |
-|---|---|
-| `in-bash` / `in-bash pepe.sh` | `bash --login` (loads `profile.d`). When a snippet is not zsh-safe. |
-| `in-sh` | POSIX `sh -l` |
-| `only-in-container bun test` | Runs **only inside** the container |
-| `skip-if-container adb start-server` | Runs **only on the host** |
+#### `in-bash`
 
-They detect `/.dockerenv` or `IS_INTO_CONTAINER=true`. Full text: `dockernodebun --helpers`.
+`bash --login` so `/etc/profile.d/nodebun.sh` loads (`BUN_*` / `FNM_*`). Use when a snippet is not zsh-safe (`set -o pipefail`, `[[ ]]`, bash arrays). No args: interactive bash.
+
+```bash
+in-bash
+in-bash -c 'set -o pipefail; npm test | tee log'
+in-bash script.sh
+```
+
+#### `in-sh`
+
+POSIX `sh -l` (dash + login env). Same idea as `in-bash` for portable snippets.
+
+```bash
+in-sh
+in-sh -c 'case $1 in *.sh) echo posix ;; esac'
+in-sh script.sh
+```
+
+#### `only-in-container`
+
+Run CMD **only inside** this container. No args: exit `0` if inside, `1` if not (predicate). Outside with a command: error, exit `1`.
+
+```bash
+only-in-container                  # 0 inside, 1 on the host
+only-in-container bun run test     # skip on the host
+```
+
+#### `skip-if-container`
+
+No-op inside the container (exit `0`); run CMD on the **host**. For host-only tools (`adb`, `docker`, `osascript`). No args on the host: error (missing command).
+
+```bash
+skip-if-container adb start-server
+```
+
+Catalogue dump of these four: `dockernodebun --helpers`.
 
 ---
 
@@ -250,7 +323,7 @@ docker run --rm -it \
 
 Login shells (`su -`, `bash -l`) drop Docker `ENV`. `/etc/profile.d/nodebun.sh` re-exports the NodeBun variables (zsh already ships UTF-8 via `zsh-image.sh`).
 
-`FNM_DIR` is `777` (same idea as bun): any uid can `fnm install` / `fnm use`. Homes and `/etc/skel` get `~/.local/share/fnm` → that store.
+`FNM_DIR` is `777` (same idea as bun): any uid can `fnm install` / `fnm use`. Homes and `/etc/skel` get `~/.local/share/fnm` → that store, plus `~/.local/state` (fnm multishells) owned by that user so `fnm env` works as uid 1000.
 
 ```bash
 fnm install 20.19.0
@@ -273,9 +346,9 @@ The full dump is long on purpose. Filter by **section**. NodeBun ids stay here; 
 ```bash
 dockernodebun --sections | -s    # zsh ids + NodeBun ids
 dockernodebun --runtimes         # node / npm / bun / fnm
-dockernodebun --helpers          # in-bash, only-in-container, …
-dockernodebun --zsh-helpers      # add_text_to_zshrc, sudo-password, … (zsh)
-dockernodebun --env              # NODE_DEFAULT_VERSION, FNM_DIR, …
+dockernodebun --helpers          # in-bash, in-sh, only-in-container, skip-if-container
+dockernodebun --zsh-helpers      # add_text_to_zshrc, add_text_to_p10k, share_config_globally, sudo-password, sudo-nopasswd, git-from-host (zsh)
+dockernodebun --env              # NODE_DEFAULT_VERSION, FNM_DIR, BUN_*, IS_INTO_CONTAINER
 dockernodebun --shells           # zsh section (forwards)
 dockernodebun shells env         # mix zsh + NodeBun sections
 dockernodebun --version | -v     # image identity (NODEBUN_IMAGE_VERSION)
@@ -288,11 +361,11 @@ dockernodebun node --version | node -v
 | Id | Where | Section |
 |---|---|---|
 | `nodebun` | this image | Intro (PATH at build, no ENTRYPOINT, TTY vs keep-alive) |
-| `runtimes` | this image | `node` / `npm` / `npx` / `corepack` / `bun` / `fnm` |
+| `runtimes` | this image | `node`, `npm`, `npx`, `corepack`, `bun`, `fnm` |
 | `helpers` | this image | `in-bash`, `in-sh`, `only-in-container`, `skip-if-container` |
 | `env` | this image | `NODE_DEFAULT_VERSION`, `FNM_*`, `BUN_*`, `IS_INTO_CONTAINER` |
-| `shells`, `listing`, `network`, … | zsh base | Same ids as [`dockerzsh --sections`](https://github.com/CartagoGit/DockerZsh#catalogue-cli-dockerzsh) |
-| `zsh-helpers` | zsh base | zsh image helpers (`dockerzsh --helpers`) |
+| `shells`, `listing`, `edit`, `archives`, `network`, `system`, `extras`, `helpers`, `fonts` | zsh base | Same ids as [`dockerzsh --sections`](https://github.com/CartagoGit/DockerZsh#catalogue-cli-dockerzsh) — full tool list in [zsh README — Utilities](https://github.com/CartagoGit/DockerZsh#utilities) |
+| `zsh-helpers` | zsh base | `add_text_to_zshrc`, `add_text_to_p10k`, `share_config_globally`, `sudo-password`, `sudo-nopasswd`, `git-from-host`, `dockerzsh` |
 
 `--helpers` on **this** CLI is NodeBun. zsh’s `add_text_to_zshrc` / `sudo-password` are `dockernodebun --zsh-helpers` or `dockerzsh --helpers`. Unknown ids exit `2`.
 
