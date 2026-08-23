@@ -27,9 +27,10 @@
 #                Formato: n{node-3-segments}_b{bun-3-segments}.
 #                Si bun cambia de major, el nombre cambia (los consumidores
 #                pueden distinguir a simple vista).
-#   status:      active | deprecated. Solo `active` se publica por defecto.
-#                `deprecated` se construye una vez más para permitir migración
-#                y luego se ignora (el workflow loggea un warning).
+#   status:      active | deprecated. Solo `active` se publica en un tag
+#                trigger `v{X.Y.Z}` (deprecated se omite con ::notice::).
+#                Un tag matrix `v{X.Y.Z}_n…_b…` publica esa entrada aunque
+#                esté deprecated (pedido explícito).
 #   node:        Node.js version (MAJOR.MINOR.PATCH, 3 segmentos).
 #   bun:         Bun version (MAJOR.MINOR.PATCH, 3 segmentos).
 #   fnm:         fnm version (MAJOR.MINOR.PATCH, 3 segmentos).

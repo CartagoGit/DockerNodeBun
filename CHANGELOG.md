@@ -7,18 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- GitHub Release on tag push (`docker-hub-update.yml`). If a Release
-  for that tag already exists, it is deleted and recreated. Hub is
-  unchanged: existing Hub tags are skipped (delete them on Hub to
-  republish the image).
-
 ## [2.0.0] - 2026-08-23
 
 Pin **`FROM cartagodocker/zsh:v2.0.0`**. CMD without ENTRYPOINT.
 No sudo fallbacks. Local smoke ~695 MB (Node 26 matrix).
 
 ### Added
+- GitHub Release on tag push (`docker-hub-update.yml`). If a Release
+  for that tag already exists, it is deleted and recreated. Hub is
+  unchanged: existing Hub tags are skipped (delete them on Hub to
+  republish the image).
 - **`in-bash` / `in-sh`**: helpers en `/usr/local/bin` para lanzar
   bash o POSIX sh (con login env) desde zsh cuando un snippet no es
   zsh-safe (`set -o pipefail`, `[[ ]]`, `case` POSIX, etc.).

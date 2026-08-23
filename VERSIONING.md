@@ -290,8 +290,9 @@ Cómo añadir una nueva matriz:
 Cómo discontinuar una matriz:
 
 1. Cambiar `status: active` → `status: deprecated` en `.github/matrices.yml`.
-2. El workflow la construye una vez más (avisando con `::notice::`) y
-   luego la ignora cuando se pusheen tags futuros.
+2. Un tag trigger `v{X.Y.Z}` **omite** las deprecated (`::notice::`).
+   Para publicar una deprecated una vez más, pushea el tag matrix
+   `v{X.Y.Z}_n…_b…` de esa entrada.
 3. Cuando sepas que nadie la consume, eliminarla del manifiesto.
 
 Cómo eliminar una matriz:
