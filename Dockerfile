@@ -144,6 +144,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh \
     && ln -s ${BIN_HOME}/bun_wrapper.zsh ${BUN_BIN}/bun \
     && ln -sfn ${BUN_BIN}/bun ${NODE_BIN}/bun \
+    && ln -sfn ${BUN_BIN}/bun ${BUN_BIN}/bunx \
+    && ln -sfn ${BUN_BIN}/bunx ${NODE_BIN}/bunx \
     && chmod +x ${BIN_HOME}/in-bash ${BIN_HOME}/in-sh ${BIN_HOME}/skip-if-container ${BIN_HOME}/only-in-container \
     && chmod +x ${BIN_HOME}/bun_wrapper.zsh ${BIN_HOME}/dockernodebun \
     && mkdir -p /usr/share/nodebun \
@@ -159,6 +161,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod -R 777 ${BUN_HOME} \
     && test -x ${BUN_BIN}/bun_avx2 \
     && test -x ${BUN_BIN}/bun_baseline \
+    && test -x ${NODE_BIN}/bunx \
     && bun --version \
     && apt-get clean \
     && (rm -rf /var/lib/apt/lists/* /tmp/* || true)
@@ -174,7 +177,6 @@ RUN add_text_to_zshrc "$(printf '%s\n' \
     'fpath=(${FNM_BIN} $fpath)' \
     'eval "$(fnm env --shell zsh)"' \
     'fnm use ${NODE_DEFAULT_VERSION}' \
-    'alias bunx="bun x"' \
     )" \
     && if ! grep -q apply-sudo-password-on-boot /usr/share/globally/.zshrc 2>/dev/null; then \
          add_text_to_zshrc '[ -x /usr/local/bin/apply-sudo-password-on-boot.sh ] && /usr/local/bin/apply-sudo-password-on-boot.sh || true'; \

@@ -24,9 +24,9 @@ export NODE_DEFAULT_VERSION="${NODE_DEFAULT_VERSION:-${NODEBUN_BUILD_NODE:-}}"
 export NODEBUN_IMAGE_VERSION="${NODEBUN_IMAGE_VERSION:-${NODEBUN_BUILD_VERSION:-}}"
 unset NODEBUN_BUILD_NODE NODEBUN_BUILD_VERSION
 
-# PATH is not re-exported on purpose. node / npm / npx / bun / fnm live
-# in /usr/local/bin, which Ubuntu login PATH already keeps. Docker ENV
-# PATH is dropped by `su -` / `bash -l`; those binaries still resolve.
+# PATH is not re-exported on purpose. node / npm / npx / bun / bunx / fnm
+# live in /usr/local/bin, which Ubuntu login PATH already keeps. Docker
+# ENV PATH is dropped by `su -` / `bash -l`; those binaries still resolve.
 
 # Login zsh (`su -`) skips .zshrc when non-interactive, so the zshrc
 # `fnm env` never runs. bash-syntax eval is POSIX and zsh-safe.

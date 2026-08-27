@@ -58,13 +58,13 @@ sudo / `dockerzsh` / `add_text_to_*` come from **`cartagodocker/zsh:v2.0.0`**. N
 
 ### Runtimes (NodeBun)
 
-On `PATH` (`/usr/local/bin`) for every uid and every shell. `libatomic1` is for bun. `/usr/local/bin/bun` is a bash wrapper (AVX2 vs baseline from `/proc/cpuinfo`; chatter if `BUN_WRAPPER_DEBUG=1`). Interactive zsh: `bunx` → `bun x`. `fnm use` is this shell only (`FNM_DIR=/usr/share/fnm/store`, 777).
+On `PATH` (`/usr/local/bin`) for every uid and every shell. `libatomic1` is for bun. `/usr/local/bin/bun` is a bash wrapper (AVX2 vs baseline from `/proc/cpuinfo`; chatter if `BUN_WRAPPER_DEBUG=1`). `bunx` is the same wrapper (`bunx pkg` → `bun x pkg`). `fnm use` is this shell only (`FNM_DIR=/usr/share/fnm/store`, 777).
 
 | Tool | Docs |
 |---|---|
 | `node` | [Node.js](https://nodejs.org/docs/latest/api/) |
 | `npm` / `npx` | [npm](https://docs.npmjs.com/cli) · [npx](https://docs.npmjs.com/cli/commands/npx) |
-| `bun` | [bun](https://bun.sh/docs) |
+| `bun` / `bunx` | [bun](https://bun.sh/docs) · [bunx](https://bun.sh/docs/cli/bunx) |
 | `fnm` | [fnm](https://github.com/Schniz/fnm) |
 
 ### NodeBun helpers (ours)
@@ -127,7 +127,7 @@ Node / bun / npm / fnm are **baked at `docker build`**. `docker run` does not do
 |---|---|---|
 | Node | `fnm install` → `FNM_DIR=/usr/share/fnm/store` | `/usr/local/bin/node` |
 | npm | `npm install -g npm@…` | `/usr/local/bin/npm` |
-| bun | AVX2 + baseline zips; wrapper reads `/proc/cpuinfo` | `/usr/local/bin/bun` |
+| bun / bunx | AVX2 + baseline zips; wrapper reads `/proc/cpuinfo`; `bunx` → `bun x` | `/usr/local/bin/bun`, `/usr/local/bin/bunx` |
 | fnm | release zip | `/usr/local/bin/fnm` |
 
 zsh extras (p10k) load from `~/.zshrc` and need a **TTY**. Interactive bash/sh also get `ls`→eza. `node` / `npm` / `bun` do not need a TTY.

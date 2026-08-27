@@ -62,7 +62,7 @@ Runtimes
       npm install
       npx some-cli
 
-  bun
+  bun / bunx
       Bun is baked at build. `/usr/local/bin/bun` is a bash wrapper
       (`bun_wrapper.zsh` — bash shebang, historical .zsh name) that:
         1. Picks AVX2 or baseline from /proc/cpuinfo (bun_original).
@@ -71,12 +71,15 @@ Runtimes
         3. Propagates bun's exit code (safe with set -e).
         4. After `bun install -g` / `bun add -g` as root/sudo, chmod
            777 on $BUN_HOME so other uids can use global bins.
-      bunx is an alias (`bun x`) in interactive zsh.
+        5. bunx is the same wrapper on PATH (every uid/shell). Official
+           bun detects bunx via argv0; that name cannot survive
+           bun_original → bun_avx2, so the wrapper rewrites to `bun x`.
 
       bun --version
       bun install
       bun run dev
-      bun x cowsay hello     # bunx is an interactive zsh alias for bun x
+      bun x cowsay hello
+      bunx cowsay hello
 
   fnm
       Fast Node Manager. Store is global: FNM_DIR=/usr/share/fnm/store
@@ -151,7 +154,7 @@ re-exports BUN_* / FNM_* / IS_INTO_CONTAINER (also sourced from
 bash.bashrc and /etc/zsh/zprofile). Node / X.Y.Z for *this* image are
 /usr/share/nodebun/build.env (written at build from ARG — not hardcoded
 in the script). Used only when ENV is unset. It does **not** re-export
-PATH: node / npm / npx / bun / fnm are already in /usr/local/bin,
+PATH: node / npm / npx / bun / bunx / fnm are already in /usr/local/bin,
 which login PATH keeps. Interactive zsh still runs `fnm env` from .zshrc;
 `su -c` without a TTY does not.
 
@@ -222,7 +225,6 @@ nb_extract_tools() {
       skip["nodebun"] = 1
       skip["helpers"] = 1
       skip["env"] = 1
-      skipcmd["bunx"] = 1
       skipcmd["corepack"] = 1
     }
     /^##id:/ {

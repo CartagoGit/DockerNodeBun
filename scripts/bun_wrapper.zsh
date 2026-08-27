@@ -1,16 +1,20 @@
 #!/bin/bash
 #
-# PATH name is bun_wrapper.zsh (COPY from this repo) and ${BUN_BIN}/bun
-# is a symlink to it. The shebang is bash on purpose:
+# PATH name is bun_wrapper.zsh (COPY from this repo). ${BUN_BIN}/bun
+# and ${BUN_BIN}/bunx are symlinks to it. The shebang is bash on purpose:
 #   - [[ ]], ${arg%%=*}, and the flag loop are bash, not POSIX sh / zsh.
 #   - zsh would parse this file differently. Do not change the shebang
 #     without rewriting the body. The .zsh suffix is historical.
 #
-# What this wrapper does (then execs bun_original):
+# What this wrapper does (then runs bun_original):
 #   1. bun_original picks AVX2 vs baseline from /proc/cpuinfo.
 #   2. After `bun install -g` / `bun add -g` as root/sudo, chmod 777
 #      on $BUN_HOME so other uids can use global bins.
 #   3. Exit code is bun_original's (safe with set -e).
+#   4. bunx: official bun is one binary; bunx is a symlink and bun
+#      switches on argv0. bun_original execs bun_avx2/bun_baseline
+#      under those names, so argv0 "bunx" cannot survive. If $0 is
+#      bunx, prepend the `x` subcommand (`bunx pkg` → `bun x pkg`).
 #
 # Output:
 #   - bun's stdout is untouched.
@@ -25,6 +29,11 @@ if [[ $(id -u) -eq 0 ]]; then
     IS_ROOT_PRIV=true
 elif command -v sudo &>/dev/null && sudo -n true &>/dev/null; then
     IS_ROOT_PRIV=true
+fi
+
+# Official bunx is argv0. We cannot pass that through bun_original.
+if [[ "${0##*/}" == bunx ]]; then
+    set -- x "$@"
 fi
 
 if [[ "${BUN_WRAPPER_DEBUG:-}" == 1 ]]; then

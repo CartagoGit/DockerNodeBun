@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`bunx` on PATH.** Official bun is one binary; `bunx` is a
+  symlink and bun switches on `argv0`. The image only shipped `bun`
+  plus an interactive zsh alias `bunx="bun x"`, so bash/sh/scripts/CI
+  got `command not found`. A symlink alone is not enough: the wrapper
+  calls `bun_original`, which execs `bun_avx2`/`bun_baseline` under
+  those names, so `argv0` never stays `bunx`. The wrapper now rewrites
+  `bunx pkg` → `bun x pkg`. `/usr/local/bin/bunx` is a symlink to the
+  same wrapper. The zsh alias is gone.
+
 ### Changed
 - Interactive bash/sh inherit zsh `ls` → eza (and zoxide; bash fzf
   keys) from the parent image. No NodeBun change; rebuild on a zsh
